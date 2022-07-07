@@ -1,16 +1,47 @@
 <?php
-// index.php
-// An installer wrapper which sets up the "Install" controller and displays the installer interface.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * Installer wrapper: sets up the Install controller and displays the
+ * installer interface.
+ */
 define("IN_ESO", 1);
 
 // Unset the page execution time limit.
 @set_time_limit(0);
 
+// Define directory constants.
+if (!defined("PATH_ROOT")) define("PATH_ROOT", realpath(__DIR__ . "/.."));
+if (!defined("PATH_CONFIG")) define("PATH_CONFIG", PATH_ROOT."/config");
+if (!defined("PATH_CONTROLLERS")) define("PATH_CONTROLLERS", PATH_ROOT."/controllers");
+if (!defined("PATH_LANGUAGES")) define("PATH_LANGUAGES", PATH_ROOT."/languages");
+if (!defined("PATH_LIBRARY")) define("PATH_LIBRARY", PATH_ROOT."/lib");
+if (!defined("PATH_PLUGINS")) define("PATH_PLUGINS", PATH_ROOT."/plugins");
+if (!defined("PATH_SKINS")) define("PATH_SKINS", PATH_ROOT."/skins");
+if (!defined("PATH_UPLOADS")) define("PATH_UPLOADS", PATH_ROOT."/uploads");
+if (!defined("PATH_VIEWS")) define("PATH_VIEWS", PATH_ROOT."/views");
+
 // Require essential files.
-require "../lib/functions.php";
-require "../lib/classes.php";
-require "../lib/database.php";
+require PATH_LIBRARY."/functions.php";
+require PATH_LIBRARY."/classes.php";
+require PATH_LIBRARY."/database.php";
 
 // Start a session if one does not already exist.
 if (!session_id()) session_start();
@@ -25,7 +56,7 @@ if (get_magic_quotes_gpc()) {
 	$_COOKIE = array_map("undoMagicQuotes", $_COOKIE);
 }
 
-// Sanitize the request data. This is pretty much the same as using htmlentities. 
+// Sanitize the request data using sanitize().
 $_POST = sanitize($_POST);
 $_GET = sanitize($_GET);
 $_COOKIE = sanitize($_COOKIE);
@@ -59,37 +90,39 @@ switch ($install->step) {
 // Fatal checks.
 case "fatalChecks": ?>
 <h1><img src='logo.svg' data-fallback='logo.png' alt='Forum logo'/>Uh oh, something's not right!</h1>
-<p>The following errors were found with your forum's setup. They must be resolved before you can continue the installation.</p>
 <hr/>
+<p>The following errors were found with your forum's setup. They must be resolved before you can continue the installation.</p>
 <ul>
 <?php foreach ($install->errors as $error) echo "<li>$error</li>"; ?>
 </ul>
-<p>If you run into any other problems or just want some help with the installation, feel free to join <a href='https://geteso.org'>geteso.org</a> where a bunch of friendly people will be happy to help you out.</p>
-<hr/>
+<p>If you run into any other problems or just want some help with the installation, feel free to join the <a href='https://forum.geteso.org'>esoBB support forum</a> where a bunch of friendly people will be happy to help you out.</p>
 <p id='footer'><input class='button' value='Try again' type='submit'/></p>
+<hr/>
+<p id='version'>esoBB version <?php echo $install->getVersion(); ?></p>
 <?php break;
 
 
 // Warning checks.
 case "warningChecks": ?>
 <h1><img src='logo.svg' data-fallback='logo.png' alt='Forum logo'/>Warning!</h1>
-<p>The following errors were found with your forum's setup. You can continue the installation without resolving them, but some functionality may be limited.</p>
 <hr/>
+<p>The following errors were found with your forum's setup. You can continue the installation without resolving them, but some functionality may be limited.</p>
 <ul>
 <?php foreach ($install->errors as $error) echo "<li>$error</li>"; ?>
 </ul>
-<p>If you run into any other problems or just want some help with the installation, feel free to join <a href='https://geteso.org'>geteso.org</a> where a bunch of friendly people will be happy to help you out.</p>
-<hr/>
+<p>If you run into any other problems or just want some help with the installation, feel free to join the <a href='https://forum.geteso.org'>esoBB support forum</a> where a bunch of friendly people will be happy to help you out.</p>
 <p id='footer'><input class='button' value='Next step &#155;' type='submit' name='next'/></p>
+<hr/>
+<p id='version'>esoBB version <?php echo $install->getVersion(); ?></p>
 <?php break;
 
 
 // Specify setup information.
 case "info": ?>
 <h1><img src='logo.svg' alt=''/>Specify setup information</h1>
+<hr/>
 <p>Welcome to the installer.  We need a few details from you so we can get your forum set up and ready to go.</p>
 <p>If you have any trouble, get help on <a href='https://geteso.org'>geteso.org</a>.</p>
-<hr/>
 
 <ul class='form'>
 <li><label>Forum title</label> <input id='forumTitle' name='forumTitle' tabindex='1' type='text' class='text' placeholder="e.g. Simon's Krav Maga Forum" value='<?php echo @$_POST["forumTitle"]; ?>'/>
@@ -151,8 +184,6 @@ case "info": ?>
 <li><label>Use friendly URLs</label> <input name='friendlyURLs' type='checkbox' tabindex='14' class='checkbox' value='1' checked='<?php echo (!empty($_POST["friendlyURLs"]) or $install->suggestFriendlyUrls()) ? "checked" : ""; ?>'/></li>
 </ul>
 
-<hr/>
-
 <input type='hidden' name='showAdvanced' id='showAdvanced' value='<?php echo $_POST["showAdvanced"]; ?>'/>
 <script type='text/javascript'>
 // <![CDATA[
@@ -170,12 +201,15 @@ function toggleAdvanced() {
 </div>
 
 <p id='footer' style='margin:0'><input type='submit' tabindex='15' value='Next step &#155;' class='button'/></p>
+<hr/>
+<p id='version'>esoBB version <?php echo $install->getVersion(); ?></p>
 <?php break;
 
 
 // Show an installation error.
 case "install": ?>
 <h1><img src='logo.svg' alt=''/>Uh oh! It's a fatal error...</h1>
+<hr/>
 <p class='warning msg'>The forum installer encountered an error.</p>
 <p>The installer has encountered a nasty error which is making it impossible to install a forum on your server. But don't feel down, <strong>here are a few things you can try</strong>:</p>
 <ul>
@@ -188,7 +222,6 @@ case "install": ?>
 <hr class='aboveToggle'/>
 <div id='error'>
 <?php echo $install->errors[1]; ?>
-<hr/>
 </div>
 <script type='text/javascript'>
 // <![CDATA[
@@ -202,12 +235,15 @@ hide(document.getElementById("error"));
 <input type='submit' class='button' value='&#139; Go back' name='back'/>
 <input type='submit' class='button' value='Try again'/>
 </p>
+<hr/>
+<p id='version'>esoBB version <?php echo $install->getVersion(); ?></p>
 <?php break;
 
 
 // Finish!
 case "finish": ?>
 <h1><img src='logo.svg' alt=''/>Congratulations!</h1>
+<hr/>
 <p>Your forum has been installed, and it should be ready to go.</p>
 <p>It's highly recommended that you <strong>remove the <code>install</code> folder</strong> to secure your forum.</p>
 
@@ -217,9 +253,8 @@ case "finish": ?>
 <strong>Queries run</strong>
 <pre>
 <?php if (isset($_SESSION["queries"]) and is_array($_SESSION["queries"]))
-	foreach ($_SESSION["queries"] as $query) echo sanitize($query) . ";<br/><br/>"; ?>
+	foreach ($_SESSION["queries"] as $query) echo sanitizeHTML($query) . ";<br/><br/>"; ?>
 </pre>
-<hr/>
 </div>
 <script type='text/javascript'>
 // <![CDATA[
@@ -230,6 +265,8 @@ hide(document.getElementById("advanced"));
 // ]]>
 </script>
 <p style='text-align:center' id='footer'><input type='submit' class='button' value='Take me to my forum!' name='finish'/></p>
+<hr/>
+<p id='version'>esoBB version <?php echo $install->getVersion(); ?></p>
 <?php break;
 
 }

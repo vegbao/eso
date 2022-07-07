@@ -1,13 +1,34 @@
 <?php
-// English (casual).php
-// English casual language pack.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * 'English (casual)' language pack: contains a few quips here and there.
+ */
 $language = array(
 
+// Defines the character set that this language uses.
 "charset" => "utf-8",
 
 "*" => "*",
-"Dashboard" => "Dashboard",
+
+// Human-friendly dates and times (e.g. edited by Simon 5 minutes ago).
 "dateFormat" => "j F Y, g:i a T", // see https://php.net/manual/en/function.date.php for details
 "day ago" => "Yesterday",
 "days ago" => "%d days ago",
@@ -23,50 +44,69 @@ $language = array(
 "weeks ago" => "%d weeks ago",
 "year ago" => "Last year",
 "years ago" => "%d years ago",
+
 "a private conversation" => "a private conversation",
 "Account information" => "Account information",
+"Add a new language pack" => "Add a new language pack",
 "Add a new plugin" => "Add a new plugin",
 "Add a new skin" => "Add a new skin",
+"Add language pack" => "Add language pack",
 "Add plugin" => "Add plugin",
 "Add member" => "Add",
 "Add skin" => "Add skin",
 "Administrator" => "Administrator",
 "Administrator-plural" => "Administrators",
+"Advanced settings" => "Advanced settings",
+"Allow registration" => "Allow registration",
 "Appearance settings" => "Appearance settings",
 "Are you human" => "Are you human?",
 "author" => "by %s",
+
 "Basic settings" => "Basic settings",
 "Bold" => "Bold",
+
 "Cancel" => "Cancel",
 "Can't make it out" => "Can't make it out? <a href='%s'>Try another one!</a>",
 "Change avatar" => "Change avatar",
 "Change icon" => "Change icon",
 "Change logo" => "Change logo",
 "Change my password or email" => "Change my password or email",
+"Change my username" => "Change my username",
 "Change password" => "Change password",
+"changeUsername" => "Change usernames",
+"changeUsernameInfo" => "Whether or not accounts can change their usernames.",
+"changeYourName" => "Once you change your name your old one will be free!",
 "Check for updates" => "Check for updates",
+"checkNewResultsInterval" => "Check for new results interval",
+"checkNewResultsInfo" => "Amount of time by which new conversations are checked for in an existing search. (60 seconds.)",
 "Confirm password" => "Confirm password",
 "Conversation" => "Conversation",
+"Conversation-plural" => "Conversations",
 "conversations" => "conversations",
 "Conversations participated in" => "Conversations participated in",
 "Conversations started" => "Conversations started",
 "Current icon" => "Current icon",
 "Current logo" => "Current logo",
+
 "Dashboard" => "Dashboard",
 "Debug information" => "Debug information",
 "Default forum language" => "Default forum language",
 "delete" => "delete",
 "Delete conversation" => "Delete conversation",
 "deleted by" => "deleted by %s",
+"Disable" => "Disable",
 "disableJSEffects" => "Disable JavaScript effects and animations",
+"Disable emoticons" => "Disable image emoticons",
 "Discard draft" => "Discard draft",
 "Display avatars" => "Display avatars",
 "do not display avatars" => "do not display avatars",
+
 "edit" => "edit",
 "edited by" => "edited by",
 "Email" => "Email",
 "emailOnPrivateAdd" => "Email me when I'm added to a private conversation",
 "emailOnStar" => "Email me when someone posts in a conversation I have starred",
+"Enable" => "Enable",
 "Enter a conversation title" => "Enter a conversation title",
 "Enter the web address of a logo" => "Enter the web address of a logo",
 "Enter the web address of an avatar" => "Enter the web address of an avatar",
@@ -74,6 +114,7 @@ $language = array(
 "Enter your email" => "Enter your email",
 "Everyone" => "Everyone",
 "exampleTags" => "ex. movies, winter olympics, cooking",
+
 "Fatal error" => "Uh oh! It's a fatal error...",
 "fatalErrorMessage" => "<p>Your forum has encountered an nasty error which is making it impossible to do whatever it is that you're doing. But don't feel down - <strong>here are a few things you can try</strong>:</p>
 <ul>
@@ -90,25 +131,38 @@ $language = array(
 "Forum language" => "Forum language",
 "Forum icon" => "Forum icon",
 "Forum logo" => "Forum logo",
+"Forum settings" => "Forum settings",
+"Forum statistics" => "Forum statistics",
 "Forum title" => "Forum title",
+"Forum version" => "Forum version",
 "forumDescription" => "%s is a web-forum discussing %s, and %s.",
+
+"gzipOutput" => "Gzip page output",
+"gzipOutputInfo" => "Whether or not to compress the page output. Saves bandwith.",
 "go to this post" => "go to this post",
+
 "Header" => "Header",
 "hide" => "hide",
 "Home" => "Home",
 "Hooked functions" => "Hooked functions",
 "hour" => "hour",
 "hours" => "hours",
+"httpsInfo" => "This will not substitute a web certificate.",
+"httpsSetting" => "Enforce HTTPS",
+
 "iconInfo" => "Your forum icon appears next to links and web clips in order to represent your forum. Your logo will be automatically refitted to be 256 pixels by 256 pixels.",
 "Image" => "Image",
+"Installed language packs" => "Installed languages",
 "Installed plugins" => "Installed plugins",
 "Installed skins" => "Installed skins",
 "Italic" => "Italic",
+
 "Join this forum" => "Join this forum!",
 "Join us" => "Join us",
 "Jump to last" => "Jump to last",
 "Jump to unread" => "Jump to unread",
 "Just now" => "Just now",
+
 "labels" => array(
 	"sticky" => "Sticky",
 	"private" => "Private",
@@ -116,7 +170,8 @@ $language = array(
 	"locked" => "Locked"
 ),
 "Labels" => "Labels",
-"languagePackInfo" => "Upload languages packs to the <code>languages/</code> folder to see them here.",
+"languagePackInfo" => "Upload languages packs to the <code>languages/</code> folder or the languages dashboard tab to see them here.",
+"Languages" => "Languages",
 "Last" => "Last",
 "Last active" => "Last active",
 "Last reply" => "Last reply",
@@ -125,27 +180,45 @@ $language = array(
 "Lock" => "Lock",
 "Log in" => "Log in",
 "Log out" => "Log out",
+"loginsMinuteInfo" => "Amount of login attempts a user is limited to per minute.",
+"loginsPerMinute" => "Logins per minute",
 "logoInfo" => "On most skins, your forum logo appears near the title in the header of your forum. Your logo will be automatically resized to be 32 pixels high.",
-"Start a conversation" => "Start a conversation",
+
 "Mark all conversations as read" => "Mark all conversations as read",
 "Member" => "Member",
 "member online" => "<a href='" . makeLink("online") . "'>member online</a>",
 "Member-plural" => "Members",
 "Members allowed to view this conversation" => "Members allowed to view this conversation",
 "members online" => "<a href='" . makeLink("online") . "'>members online</a>",
+"messageDisplayTime" => "Message display time",
+"messageDisplayTimeInfo" => "Amount of time by which most messages floating above the navigation bar disappear. (20 seconds = 20 seconds, lol.)",
+"minPasswordLength" => "Minimum password length",
 "Moderator" => "Moderator",
 "Moderator-plural" => "Moderators",
 "My current password" => "My current password",
 "My profile" => "My profile",
 "My settings" => "My settings",
 "MySQL queries" => "MySQL queries",
+"MySQL version" => "MySQL version",
+
 "Never" => "Never",
+"New conversations in the past week" => "New conversations in the past week",
 "New email" => "New email",
 "New password" => "New password",
+"New posts in the past week" => "New posts in the past week",
+"New username" => "New username",
 "Next" => "Next &#155;",
 "No avatar" => "No avatar",
 "No preview" => "No preview",
 "Number of characters" => "Number of characters",
+"numberMoreResults" => "Number of more results",
+"numberMoreResultsInfo" => "Total number of conversations to list per every request for more results.",
+"numberResults" => "Number of results",
+"numberResultsInfo" => "Number of conversations to list for a normal search.",
+"numberTagsInTagCloud" => "Number of tags in tag cloud",
+"nonAsciiCharacters" => "Allow non-printable characters",
+"nonAsciiInfo" => "Whether or not usernames may contain non-ASCII characters such as <code>¶,Ü,Œ</code>.",
+
 "on alternating sides" => "on alternating sides",
 "on the left" => "on the left",
 "on the right" => "on the right",
@@ -153,13 +226,12 @@ $language = array(
 "Online members" => "Online members",
 "optional" => "(optional)",
 "Other settings" => "Other settings",
+
 "Page loaded in" => "Page loaded in just over <strong><span id='debugLoadTime'>%s</span> seconds</strong>",
 "Password" => "Password",
 "Permalink to this post" => "Permalink to this post",
+"PHP version" => "PHP version",
 "Plugins" => "Plugins",
-"Preview" => "Preview",
-"Previous" => "&#139; Previous",
-"profile" => "%s's profile",
 "Post a reply" => "Post a reply",
 "Post count" => "Post count",
 "posts" => "posts",
@@ -167,22 +239,36 @@ $language = array(
 "post per day" => "that's about 1 post per day",
 "posts per day" => "that's about %s posts per day",
 "POST + GET + FILES information" => "POST + GET + FILES information",
+"Powered by" => "Powered by",
+"Preview" => "Preview",
+"Previous" => "&#139; Previous",
+"profile" => "%s's profile",
+
 "quote" => "quote",
 "Quote" => "\"Quote\"",
+
 "Recent posts" => "Recent posts",
 "Recover password" => "Get me a new password!",
+"Registration settings" => "Registration settings",
 "Remember me" => "Remember me",
 "restore" => "restore",
+"Require email verification" => "Require email verification",
+"Require manual approval" => "Require manual approval",
 "RSS" => "RSS",
+
 "Sample captcha image" => "Sample captcha image",
 "Save changes" => "Save changes",
 "Save draft" => "Save draft",
 "Save post" => "Save post",
 "Search" => "Search!",
+"searchesMinuteInfo" => "Amount of searches a user is limited to per minute.",
+"searchesPerMinute" => "Searches per minute",
 "See the private conversations I've had" => "See the private conversations I've had with %s",
+"Server information" => "Server information",
 "SESSION + COOKIE information" => "SESSION + COOKIE information",
 "settings" => "settings",
 "show" => "show",
+"showAvatarThumbnails" => "Show avatar thumbnails",
 "Show another one" => "Show another one",
 "show conversations participated in" => "let's see!",
 "show conversations started" => "check them out!",
@@ -199,30 +285,43 @@ $language = array(
 "Strike" => "Strike",
 "Submit post" => "Submit post!",
 "Suspended" => "Suspended",
+
 "Tags" => "Tags",
 "Type the letters you see" => "Type the letters you see in the image",
+
 "Unlock" => "Unlock",
 "unread" => "unread",
 "Unstarred" => "Unstarred",
 "Unsticky" => "Unsticky",
 "Untitled conversation" => "Untitled conversation",
 "Unvalidated" => "Unvalidated",
+"Unvalidated members" => "New members",
+"updateCurrentResultsInterval" => "Update current results interval",
+"updateCurrentResultsInfo" => "Amount of time by which conversations are updated in an existing search. (30 = 30 seconds.)",
 "Update debug information for background AJAX requests" => "Update debug information for background AJAX requests",
 "Upload an avatar" => "Upload an avatar from your computer",
+"Upload a language pack" => "Upload a language pack",
 "Upload a logo from your computer" => "Upload a logo from your computer",
 "Upload an icon from your computer" => "Upload an icon from your computer",
 "Upload a plugin" => "Upload a plugin package",
 "Upload a skin" => "Upload a skin package",
-"Use friendly URLs" => "Use friendly URLs",
-"useDarkMode" => "Selectively invert colors (dark mode)",
+"uploadPackages" => "Upload packages",
+"uploadPackagesInfo" => "Whether or not admins can upload plugin and skin packages to your forum.",
 "Use default icon" => "Use default icon",
 "Use default logo" => "Use default logo",
+"Use forum description" => "Use forum description in meta tags",
+"Use friendly URLs" => "Use friendly URLs",
 "Username" => "Username",
+"userOnlineExpire" => "User online expire",
+"userOnlineExpireInfo" => "Amount of time a user's last seen time is before the user goes offline. (300 seconds = 5 minutes.)",
+
 "version" => "version %s",
 "Video" => "Video",
 "Viewing" => "Viewing:",
 "viewingPosts" => "<b>%s-%s</b> of %s posts",
 
+
+// Emails.
 "emails" => array(
 
 "forgotPassword" => array(
@@ -249,6 +348,7 @@ $language = array(
 "ajaxDisconnected" => "Unable to communicate with the server. Wait a few seconds and <a href='javascript:Ajax.resumeAfterDisconnection()'>try again</a>, or <a href='' onclick='window.location.reload();return false'>refresh the page</a>.",
 );
 
+
 $language["gambits"] = array(
 
 // Translating the gambit system can be quite complex, but we'll do our best to get you through it. :)
@@ -258,6 +358,7 @@ $language["gambits"] = array(
 // These gambits are pretty much evaluated as-they-are.
 // tag:, author:, contributor:, and quoted: are combined with a value after the colon (:).
 // For example: tag:video games, author:myself
+"100" => "100",
 "tag:" => "tag:",
 "author:" => "author:",
 "contributor:" => "contributor:",
@@ -265,6 +366,7 @@ $language["gambits"] = array(
 "myself" => "myself",
 "draft" => "draft",
 "has attachments" => "has attachments",
+"limit:" => "limit:",
 "locked" => "locked",
 "order by newest" => "order by newest",
 "order by posts" => "order by posts",
@@ -307,6 +409,7 @@ $language["gambits"] = array(
 "active" => "active" // as in "active last 180 days"
 );
 
+
 $language["gambits"] += array(
 
 // Now the hard bit. This is a regular expression to test for the "active" gambit.
@@ -331,6 +434,8 @@ $language["gambits"] += array(
 
 );
 
+
+// Messages.
 $messages = array(
 "accountNotYetVerified" => array("class" => "info", "message" => "You need to verify your account before you can log in with it! If you didn't receive the verification email, <a href='%s'>click here to get it sent again</a>."),
 "accountValidated" => array("class" => "success", "message" => "Cool! Your account has been validated and you can now start participating in conversations. Why not <a href='" . makeLink("new") . "'>start one</a> yourself?"),
@@ -340,6 +445,7 @@ $messages = array(
 "captchaError" => array("class" => "warning", "message" => "Oops, you got it wrong! Try again with this combination."),
 "changesSaved" => array("class" => "success", "message" => "Your changes were saved."),
 "conversationDeleted" => array("class" => "success", "message" => "The conversation was deleted. Didn't that feel good?"),
+"downloadLanguagePacks" => array("class" => "info", "message" => "You can download more language packs from the <a href='https://github.com/geteso'>eso organization</a>."),
 "downloadPlugins" => array("class" => "info", "message" => "You can download more plugins from the <a href='https://github.com/geteso'>eso organization</a>."),
 "downloadSkins" => array("class" => "info", "message" => "You can download more skins from the <a href='https://github.com/geteso'>eso organization</a>."),
 "emailDoesntExist" => array("class" => "warning", "message" => "That email address doesn't match any members in the database. Did you make a typo?"),
@@ -355,9 +461,12 @@ $messages = array(
 "incorrectLogin" => array("class" => "warning", "message" => "Your login details were incorrect. <a href='" . makeLink("forgot-password") . "'>Have you forgotten your password?</a>"),
 "incorrectPassword" => array("class" => "warning", "message" => "Your current password is incorrect."),
 "invalidCharacters" => array("class" => "warning", "message" => "You can't use invalid characters in your name."),
+"invalidConfig" => array("class" => "warning","message" => "The configuration setting you've entered must have a value greater than 0."),
 "invalidEmail" => array("class" => "warning", "message" => "Seems this email address isn't valid..."),
+"invalidLanguagePack" => array("class" => "warning", "message" => "The language pack you uploaded is not valid."),
 "invalidPlugin" => array("class" => "warning", "message" => "The plugin you uploaded is not valid."),
 "invalidSkin" => array("class" => "warning", "message" => "The skin you uploaded is not valid."),
+"languagePackAdded" => array("class" => "success", "message" => "The language pack was successfully added!"),
 "locked" => array("class" => "warning", "message" => "Hm, looks like this conversation is <strong>locked</strong>, so you can't reply to it."),
 "lockedButCanReply" => array("class" => "info", "message" => "This conversation is <strong>locked</strong>, but you can still reply because you are <strong>awesome</strong>. (And also because you are a moderator or administrator.)"),
 "loginRequired" => array("class" => "warning", "message" => "Hey! You need to <a href='" . curLink() . "#' onclick='showLogin();return false'>log in</a> or <a href='" . makeLink("join") . "'>create an account</a> to do anything on this forum."),
@@ -365,11 +474,14 @@ $messages = array(
 "nameEmpty" => array("class" => "warning", "message" => "You must enter a name!"),
 "nameTaken" => array("class" => "warning", "message" => "The name you have entered is taken or is a reserved word."),
 "newSearchResults" => array("class" => "info", "message" => "There has been new activity that has affected your search results. <a href='javascript:Search.showNewActivity()'>Show new activity</a>"),
+"noLanguagesInstalled" => array("class" => "warning", "message" => "No language packs are currently installed."),
 "noMembersOnline" => array("class" => "warning", "message" => "No members are currently online."),
+"noMembersUnvalidated" => array("class" => "warning","message" => "No members are currently unvalidated."),
 "noPermission" => array("class" => "warning", "message" => "Bad user! You do not have permisssion to perform this action."),
 "noPluginsInstalled" => array("class" => "warning", "message" => "No plugins are currently installed."),
 "noSearchResults" => array("class" => "warning", "message" => "No conversations matching your search were found."),
 "noSkinsInstalled" => array("class" => "warning", "message" => "No skins are currently installed."),
+"noUploadingPackages" => array("class" => "warning", "message" => "Curses... uploading plugin and skin packages has been disabled on this forum. I mean, you can always ask the forum administrator to turn it back on."),
 "notWritable" => array("class" => "warning", "message" => "<code>%s</code> is not writeable. Try <code>chmod</code>ing it to <code>777</code>, or if it doesn't exist, <code>chmod</code> the folder it is contained within."),
 "passwordChanged" => array("class" => "success", "message" => "Alright, your password has been changed. Now you can log in! Hey, try not to forget it again, ok?"),
 "passwordEmailSent" => array("class" => "success", "message" => "Ok, we've sent you an email containing a link to reset your password. Check your spam folder if you don't receive it within the next minute or two. Yeah, some times we get put through to spam - can you believe it?!"),
@@ -380,13 +492,16 @@ $messages = array(
 "pluginCannotBeEnabled" => array("class" => "warning", "message" => "The plugin <em>%s</em> cannot be enabled: %s"),
 "postTooLong" => array("class" => "warning", "message" => "Your post is really, really long! Too long! The maximum number of characters allowed is " . number_format($config["maxCharsPerPost"]) . ". That's really long!"),
 "reenterInformation" => array("class" => "info", "message" => "Please reenter this information."),
+"registrationClosed" => array("class" => "info", "message" => "Sorry, but user registration has been disabled on this forum. Maybe you should check again some other time!"),
 "removeDirectoryWarning" => array("class" => "warning", "message" => "Hey! Looks like you haven't deleted the <code>%s</code> directory like we told you to! You probably should, as it'll make your forum a bit more secure."),
 "setNewPassword" => array("class" => "info", "message" => "Alright! Now, what do you want your new password to be?"),
 "skinAdded" => array("class" => "success", "message" => "The skin was successfully added!"),
 "suspended" => array("class" => "warning", "message" => "Ouch! A forum moderator has <strong>suspended</strong> your account. It sucks, but until the suspension is lifted you won't be able to do much around here. Hey, screw them!"),
-// "updatesAvailable" => array("class" => "info", "message" => "A new version of eso (<strong>%s</strong>) is available for download. You have version {$versions["eso"]}. <strong><a href='https://github.com/geteso'>Get it now</a></strong>!"),
+"updatesAvailable" => array("class" => "info", "message" => "A new version of eso (<strong>%s</strong>) is available for download. You have version {$versions["eso"]}. <strong><a href='https://geteso.org/download'>Get it now</a></strong>!"),
 "verifyEmail" => array("class" => "success", "message" => "Before you can start using your newly-created account, you'll need to verify your email address. Within the next minute or two you should receive an email from us containing a link to activate your account. <strong>Check your spam folder</strong> if you don't receive this email shortly!"),
 "viewMore" => array("class" => "info", "message" => "Your search found more than {$config["results"]} conversations. <a href='%s' onclick='Search.viewMore();return false'>View more</a>"),
+"waitForApproval" => array("class" => "success", "message" => "Before you can start using your newly-created account, it'll need to be manually approved. Within the next couple of hours or so your account should be able to post."),
+"waitToLogin" => array("class" => "warning", "message" => "Woah, slow down! Looks like you're trying to perform a few too many login attempts. Wait %s seconds and try again."),
 "waitToReply" => array("class" => "warning", "message" => "You must wait at least {$config["timeBetweenPosts"]} seconds between starting or replying to conversations. Take a deep breath and try again."),
 "waitToSearch" => array("class" => "warning", "message" => "Woah, slow down! Looks like you're trying to perform a few too many searches. Wait %s seconds and try again."),
 

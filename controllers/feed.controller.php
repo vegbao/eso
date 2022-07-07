@@ -1,9 +1,28 @@
 <?php
-// feed.controller.php
-// Builds a list of items to be outputted as an RSS feed.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Feed controller: builds a list of items to be outputted as an RSS
+ * feed.
+ */
 class feed extends Controller {
 
 // Feed data variables, outputted in the view.
@@ -59,7 +78,7 @@ function init()
 			// Past this point, the user is allowed to view the conversation.
 			// Set the title, link, description, etc.
 			$this->title = "{$conversation["title"]} - {$config["forumTitle"]}";
-			$this->link = $config["baseURL"] . makeLink($conversation["id"], $conversation["slug"]);
+			$this->link = $config["baseURL"] . makeLink(conversationLink($conversation["id"], $conversation["slug"]));
 			$this->description = $conversation["tags"];
 			$this->pubDate = date("D, d M Y H:i:s O", $conversation["lastActionTime"]);
 			
@@ -68,7 +87,7 @@ function init()
 			while (list($id, $member, $content, $time) = $this->eso->db->fetchRow($result)) {
 				$this->items[] = array(
 					"title" => $member,
-					"description" => sanitize($this->format($content)),
+					"description" => sanitizeHTML($this->format($content)),
 					"link" => $config["baseURL"] . makeLink("post", $id),
 					"date" => date("D, d M Y H:i:s O", $time)
 				);
@@ -85,7 +104,7 @@ function init()
 			while (list($postId, $title, $member, $content, $time) = $this->eso->db->fetchRow($result)) {
 				$this->items[] = array(
 					"title" => "$member - $title",
-					"description" => sanitize($this->format($content)),
+					"description" => sanitizeHTML($this->format($content)),
 					"link" => $config["baseURL"] . makeLink("post", $postId),
 					"date" => date("D, d M Y H:i:s O", $time)
 				);

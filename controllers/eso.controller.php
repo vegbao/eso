@@ -1,9 +1,28 @@
 <?php
-// eso.controller.php
-// Handles global actions such as logging in/out, preparing the bar, and collecting messages.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * eso controller: handles global actions such as logging in/out,
+ * preparing the bar, and collecting messages.
+ */
 class eso extends Controller {
 
 var $db;
@@ -80,37 +99,40 @@ function init()
 	if (!defined("AJAX_REQUEST")) {
 
 		// Check for updates, but only for the root admin.
-		// if ($this->user["memberId"] == $config["rootAdmin"]) {
-		//	// How long ago was the last update check? If it was any more than 1 day ago, check again now.
-		//	if (file_exists("config/lastUpdateCheck.php")) include "config/lastUpdateCheck.php";
-		//	if (!isset($lastUpdateCheck) or time() - $lastUpdateCheck >= 86400) {
-		//		if ($latestVersion = $this->checkForUpdates()) $this->message("updatesAvailable", false, $latestVersion);
-		//	}
-		// }
+//		if ($this->user["memberId"] == $config["rootAdmin"]) {
+			// How long ago was the last update check? If it was any more than 1 day ago, check again now.
+//			if (file_exists("config/lastUpdateCheck.php")) include "config/lastUpdateCheck.php";
+//			if (!isset($lastUpdateCheck) or time() - $lastUpdateCheck >= 86400) {
+//				if ($latestVersion = $this->checkForUpdates()) $this->message("updatesAvailable", false, $latestVersion);
+//			}
+//		}
 
 		// If the user IS NOT logged in, add the login form and 'Join us' link to the bar.
 		if (!$this->user) {
 			$this->addToBar("left", "<form action='" . curLink() . "' method='post' id='login'><div>
  <input id='loginName' name='login[name]' type='text' class='text' autocomplete='username' placeholder='" . (!empty($_POST["login"]["name"]) ? $_POST["login"]["name"] : $language["Username"]) . "'/>
  <input id='loginPassword' name='login[password]' type='password' class='text' autocomplete='current-password' placeholder='{$language["Password"]}'/>
- " . $this->skin->button(array("value" => $language["Log in"])) . "
+ " . $this->skin->button(array("value" => $language["Log in"], "class" => "buttonSmall")) . "
  </div></form>", 100);
- 			$this->addToBar("left", "<a href='" . makeLink("join") . "' id='nav-join'><span class='button'><input type='submit' value='{$language["Join us"]}'></span></a>", 200);
- 			$this->addToBar("left", "<a href='" . makeLink("forgot-password") . "' id='nav-fgpw'><span class='button'><input type='submit' value='{$language["Forgot password"]}'></span></a>", 300);
+ 			$this->addToBar("left", "<a href='" . makeLink("join") . "' id='joinLink'><span class='button buttonSmall'><input type='submit' value='{$language["Join us"]}'></span></a>", 200);
+ 			$this->addToBar("left", "<a href='" . makeLink("forgot-password") . "' id='forgotPassword'><span class='button buttonSmall'><input type='submit' value='{$language["Forgot password"]}'></span></a>", 300);
 		}
 		
 		// If the user IS logged in, we want to display their name and appropriate links.
 		else {
-						$this->addToBar("left", "<strong id='nav-prof'><a href='" . makeLink("profile") . "'>{$this->user["name"]}</a>:</strong>", 100);
-						$this->addToBar("left", "<a href='" . makeLink("") . "' id='nav-home'><span class='button'><input type='submit' value='{$language["Home"]}'></span></a>", 200);
-						$this->addToBar("left", "<a href='" . makeLink("profile") . "' id='mbl-prof'><span class='button'><input type='submit' value='{$language["My profile"]}'></span></a>", 300);
-						$this->addToBar("left", "<a href='" . makeLink("settings") . "' id='nav-sett'><span class='button'><input type='submit' value='{$language["My settings"]}'></span></a>", 400);
-                        $this->addToBar("left", "<a href='" . makeLink("conversation", "new") . "' id='nav-conv'><span class='button'><input type='submit' value='{$language["Start a conversation"]}'></span></a>", 500);
-                        $this->addToBar("left", "<a href='" . makeLink("logout") . "' id='nav-exit'><span class='button'><input type='submit' value='{$language["Log out"]}'></span></a>", 1100);
-                        if ($this->user["admin"])
- 				$this->addToBar("left", "<a href='" . makeLink("admin") . "'><span class='button'><input type='submit' value='{$language["Dashboard"]}'></span></a>", 700);
+						$this->addToBar("left", "<strong id='user'><a href='" . makeLink("profile") . "'>{$this->user["name"]}</a>:</strong>", 100);
+						$this->addToBar("left", "<a href='" . makeLink("") . "'><span class='button buttonSmall'><input type='submit' value='{$language["Home"]}'></span></a>", 200);
+						$this->addToBar("left", "<a href='" . makeLink("profile") . "' id='profile'><span class='button buttonSmall'><input type='submit' value='{$language["My profile"]}'></span></a>", 300);
+						$this->addToBar("left", "<a href='" . makeLink("settings") . "'><span class='button buttonSmall'><input type='submit' value='{$language["My settings"]}'></span></a>", 400);
+						$this->addToBar("left", "<a href='" . makeLink("conversation", "new") . "' id='startConversation'><span class='button buttonSmall'><input type='submit' value='{$language["Start a conversation"]}'></span></a>", 500);
+						$this->addToBar("left", "<a href='" . makeLink("logout") . "' id='logout'><span class='button buttonSmall'><input type='submit' value='{$language["Log out"]}'></span></a>", 1100);
+						if ($this->user["moderator"]) $this->addToBar("left", "<a href='" . makeLink("admin") . "'><span class='button buttonSmall'><input type='submit' value='{$language["Dashboard"]}'></span></a>", 700);
 		}
 		
+		// The following text constitutes a copyright notification.
+		$this->addToFooter("<p id='copyright'>{$language["Powered by"]} <a href='https://geteso.org'>eso</a><!-- A derivative of esoTalk.  Not directly affiliated with Simon or Toby Zerner. --></p>", 1000);
+		// End copyright notification.
+
 		// Set up some default JavaScript files and language definitions.
 		$this->addScript("js/eso.js", -1);
 		$this->addLanguageToJS("ajaxRequestPending", "ajaxDisconnected");
@@ -146,7 +168,10 @@ function login($name = false, $password = false, $hash = false)
 	if (isset($_SESSION["user"])) return true;
 
 	// If a raw password was passed, convert it into a hash.
-	if ($name and $password) $hash = md5($config["salt"] . $password);
+	if ($name and $password) {
+		$salt = $this->db->result("SELECT salt FROM {$config["tablePrefix"]}members WHERE name='$name'", 0);
+		$hash = md5($salt . $password);
+	}
 	
 	// Otherwise attempt to get the member ID and password hash from a cookie.
 	elseif ($hash === false) {
@@ -167,21 +192,65 @@ function login($name = false, $password = false, $hash = false)
 		
 		// Get the user's IP address, and validate it against the cookie IP address if they're logging in via cookie.
 		// Do some back-and-forth conversion so we only use the first three parts of the IP (the last will be 0.)
-		$ip = long2ip(ip2long($_SESSION["ip"]));
+//		$ip = long2ip(ip2long($_SESSION["ip"]));
+		$ip = (int)ip2long($_SESSION["ip"]);
 		$ip = sprintf("%u", ip2long(substr($ip, 0, strrpos($ip, ".")) . ".0"));
 		if (isset($cookie)) $components["where"][] = "cookieIP=" . ($ip ? $ip : "0");
 		
 		$this->callHook("beforeLogin", array(&$components));
+
+		// If we're counting logins per minute, impose some flood control measures.
+		if (!isset($cookie) and $config["loginsPerMinute"] > 0) {
+
+			// If we have a record of their logins in the session, check how many logins they've performed in the last
+			// minute.
+			if (!empty($_SESSION["logins"])) {
+				// Clean anything older than 60 seconds out of the logins array.
+				foreach ($_SESSION["logins"] as $k => $v) {
+					if ($v < time() - 60) unset($_SESSION["logins"][$k]);
+				}
+				// Have they performed >= $config["loginsPerMinute"] logins in the last minute? If so, don't continue.
+				if (count($_SESSION["logins"]) >= $config["loginsPerMinute"]) {
+					$this->eso->message("waitToLogin", true, array(60 - time() + min($_SESSION["logins"])));
+					return;
+				}
+			}
+
+			// However, if we don't have a record in the session, use the MySQL logins table.
+			else {
+				// Get the user's IP address.
+//				$ip = (int)ip2long($_SESSION["ip"]);
+				// Have they performed >= $config["loginsPerMinute"] logins in the last minute?
+				if ($this->eso->db->result("SELECT COUNT(*) FROM {$config["tablePrefix"]}logins WHERE ip=$ip AND loginTime>UNIX_TIMESTAMP()-60", 0) >= $config["loginsPerMinute"]) {
+					$this->eso->message("waitToLogin", true, 60);
+					return;
+				}
+				// Log this attempt in the logins table.
+				$this->eso->db->query("INSERT INTO {$config["tablePrefix"]}logins (ip, loginTime) VALUES ($ip, UNIX_TIMESTAMP())");
+				// Proactively clean the logins table of logins older than 60 seconds.
+				$this->eso->db->query("DELETE FROM {$config["tablePrefix"]}logins WHERE loginTime<UNIX_TIMESTAMP()-60");
+			}
+
+			// Log this attempt in the session array.
+			if (!isset($_SESSION["logins"]) or !is_array($_SESSION["logins"])) $_SESSION["logins"] = array();
+			$_SESSION["logins"][] = time();
+		}
 
 		// Run the query and get the data if there is a matching user.
 		$result = $this->db->query($this->db->constructSelectQuery($components));
 		if ($data = $this->db->fetchAssoc($result)) {
 			
 			$this->callHook("afterLogin", array(&$data));
-			
-			// If their account is unvalidated, show a message with a link to resend a verification email.
-			if ($data["account"] == "Unvalidated") {
+
+			// If their account is unvalidated and we're using email verification, show a message with a link to resend a verification email.
+			if ($data["account"] == "Unvalidated" and $config["registrationRequireEmail"] == true) {
 				$this->message("accountNotYetVerified", false, makeLink("join", "sendVerification", $data["memberId"]));
+				return false;
+			}
+			// If we're manually approving accounts, show a message that says to wait for approval.
+			// Even if this forum doesn't require verification, accounts that were made before that change will need approval.
+			elseif ($data["account"] == "Unvalidated") {
+				$this->message("waitForApproval", false);
 				return false;
 			}
 			
@@ -189,16 +258,11 @@ function login($name = false, $password = false, $hash = false)
 			$_SESSION["user"] = $this->user = $data;
 			
 			// Regenerate the session ID and token.
-			session_regenerate_id();
+//			session_regenerate_id();
 			regenerateToken();
 			
 			// If the "remember me" box was checked, set a cookie, and set the cookieIP field in the database.
-			// if (@$_POST["login"]["rememberMe"]) {
-			//	$this->eso->db->query("UPDATE {$config["tablePrefix"]}members SET cookieIP=$ip WHERE memberId={$_SESSION["user"]["memberId"]}");
-			//	setcookie($config["cookieName"], $_SESSION["user"]["memberId"] . sanitizeForHTTP($hash), time() + $config["cookieExpire"], "/", $config["cookieDomain"]);
-			// }
-
-			// Assume that the signing-in user wants to be remembered, set a cookie, and set the cookieIP field in the database.
+//			if (@$_POST["login"]["rememberMe"]) {
 			if (@$_POST["login"]) {
 				$this->eso->db->query("UPDATE {$config["tablePrefix"]}members SET cookieIP=$ip WHERE memberId={$_SESSION["user"]["memberId"]}");
 				setcookie($config["cookieName"], $_SESSION["user"]["memberId"] . sanitizeForHTTP($hash), time() + $config["cookieExpire"], "/", $config["cookieDomain"]);
@@ -269,7 +333,7 @@ function getLanguages()
 {
 	$languages = array();
 	if ($handle = opendir("languages")) {
-	    while (false !== ($v = readdir($handle))) {
+		while (false !== ($v = readdir($handle))) {
 			if (!in_array($v, array(".", "..")) and substr($v, -4) == ".php" and $v[0] != ".") {
 				$v = substr($v, 0, strrpos($v, "."));
 				$languages[] = $v;
@@ -278,6 +342,25 @@ function getLanguages()
 	}
 	sort($languages);
 	return $languages;
+}
+
+// Get the installed skins and their details by reading the skins/ directory.
+function getSkins()
+{
+	global $language, $config;
+	$skins = array();
+	if ($handle = opendir("skins")) {
+		while (false !== ($file = readdir($handle))) {
+			// Make sure the skin is valid, and set up its class.
+			if ($file[0] != "." and is_dir("skins/$file") and file_exists("skins/$file/skin.php") and (include_once "skins/$file/skin.php") and class_exists($file)) {
+				// $file = substr($file, 0, strrpos($file, "."));
+				$skins[] = $file;
+			}
+		}
+		closedir($handle);
+	}
+	ksort($skins);
+	return $skins;
 }
 
 // Check for updates to the software.
@@ -538,8 +621,8 @@ function getAvatar($memberId, $avatarFormat, $type = false)
 	if (!$avatarFormat) {
 		global $config;
 		switch ($type) {
-			case "l": return "skins/{$config["skin"]}/avatarDefault.svg";
-			case "r": return "skins/{$config["skin"]}/avatarDefault.svg";
+			case "l": return "skins/{$config["skin"]}/avatarLeft.svg";
+			case "r": return "skins/{$config["skin"]}/avatarRight.svg";
 			case "thumb": return "skins/{$config["skin"]}/avatarThumb.svg";
 		}
 	}
@@ -585,9 +668,25 @@ function canChangeGroup($memberId, $group)
 {
 	global $config;
 	if (!$this->user or !$this->user["moderator"] or $memberId == $this->user["memberId"] or $memberId == $config["rootAdmin"]) return false;
-	if ($this->user["admin"]) return $this->memberGroups;
+//	if ($this->user["admin"]) return $this->memberGroups;
+
+	// If the $member's group is validated, return a complete list of $memberGroups.
+	// Administrator, Moderator, Member, and Suspended.
+	if ($this->user["admin"] and ($group != "Unvalidated")) return $this->memberGroups;
+	//
+	// If their $member's group is unvalidated, return that same list but add "Unvalidated."
+	if ($this->user["admin"] and ($group == "Unvalidated")) {
+		$this->memberGroups[5] = "Unvalidated";
+		return $this->memberGroups;
+	}
+
+	// Moderators don't get to choose from a complete list.
 	if ($this->user["moderator"] and ($group == "Member" or $group == "Suspended")) {
 		return array("Member", "Suspended");
+	//
+	// Again, let's not forget about the unvalidated group...
+	} elseif ($this->user["moderator"] and ($group == "Unvalidated")) {
+		return array("Member", "Suspended", "Unvalidated");
 	} else {
 		return false;
 	}
@@ -606,6 +705,21 @@ function isSuspended()
 		$this->user["suspended"] = $account == "Suspended";
 	}
 	return $this->user["suspended"];
+}
+
+// Returns whether or not the logged in user has been validated or not.
+// Does not return "Member", only "Unvalidated" if the user is unvalidated.
+function isUnvalidated()
+{
+	global $config;
+	if (!$this->user) return false;
+
+	if ($this->user["account"] = "Unvalidated") {
+		$account = $this->db->result("SELECT account FROM {$config["tablePrefix"]}members WHERE memberId={$this->user["memberId"]}", 0);
+		$this->user["account"] = $_SESSION["user"]["account"] = $account;
+		$this->user["unvalidated"] = $account == "Unvalidated";
+	}
+	return $this->user["unvalidated"];
 }
 
 }

@@ -1,9 +1,28 @@
 <?php
-// search.controller.php
-// Performs a search with gambits, and gets the tag cloud.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Search controller: performs a search with gambits, and gets the tag
+ * cloud.
+ */
 class search extends Controller {
 
 var $view = "search.view.php";
@@ -57,6 +76,7 @@ function init()
 		array(array($this, "gambitRandom"), 'return $term == strtolower($language["gambits"]["random"]);'),
 		array(array($this, "gambitReverse"), 'return $term == strtolower($language["gambits"]["reverse"]);'),
 		array(array($this, "gambitMoreResults"), 'return $term == strtolower($language["gambits"]["more results"]);'),
+		array(array($this, "gambitLimit"), 'return strpos($term, strtolower($language["gambits"]["limit:"])) === 0;'),
 		array(array($this, "fulltext"), 'return $term;'),
 	));
 	
@@ -70,8 +90,9 @@ function init()
 		$language["gambits"]["dead"] => "s4",
 		$language["gambits"]["has replies"] => "s2",
 		$language["gambits"]["has &gt;10 posts"] => "s4",
+		$language["gambits"]["limit:"] . $language["gambits"]["100"] => "s2",
 		$language["gambits"]["locked"] => "s4 lockedText",
-		$language["gambits"]["more results"] => "s2",
+//		$language["gambits"]["more results"] => "s2",
 		$language["gambits"]["order by newest"] => "s4",
 		$language["gambits"]["order by posts"] => "s2",
 		$language["gambits"]["random"] => "s5",
@@ -100,8 +121,8 @@ function init()
 	
 	// Define the columns of the search results table.
 	if ($this->eso->user) $this->resultsTable[] = array("class" => "star", "content" => "columnStar");
-	if (!empty($config["showAvatarThumbnails"])) $this->resultsTable[] = array("class" => "avatar", "content" => "columnAvatar");
-	$this->resultsTable[] = array("title" => $language["Conversation"], "content" => "columnConversation");
+	if (!empty($config["showAvatarThumbnails"]) and (($this->eso->user["avatarAlignment"]!="none") or (!$this->eso->user and $_SESSION["avatarAlignment"]!="none"))) $this->resultsTable[] = array("class" => "avatar", "content" => "columnAvatar");
+	$this->resultsTable[] = array("title" => $language["Conversation"], "class" => "conversation", "content" => "columnConversation");
 	$this->resultsTable[] = array("title" => $language["Posts"], "class" => "posts", "content" => "columnPosts");
 	$this->resultsTable[] = array("title" => $language["Started by"], "class" => "author", "content" => "columnAuthor");
 	$this->resultsTable[] = array("title" => $language["Last reply"], "class" => "lastPost", "content" => "columnLastReply");
@@ -135,7 +156,7 @@ function init()
 		$this->eso->addVarToJS("checkForNewResultsInterval", $config["checkForNewResultsInterval"]);
 		
 		// Add a link to the RSS feed in the bar.
-		$this->eso->addToBar("right", "<a href='" . makeLink("feed") . "' id='rss'><span class='button'><input type='submit' value='{$language["RSS"]}'></span></a>", 500);
+		$this->eso->addToBar("right", "<a href='" . makeLink("feed") . "' id='rss'><span class='button buttonSmall'><input type='submit' value='{$language["RSS"]}'></span></a>", 500);
 		
 		// Update the user's last action.
 		$this->eso->updateLastAction("");
@@ -153,12 +174,18 @@ function init()
 		// Add meta tags to the header, the "Mark all conversations as read" link to the footer, and a "Start a conversation" link for mobile support.
 		$this->eso->addToHead("<meta name='keywords' content='" . implode(",", $tags) . "'/>");
 		list($lastTag) = array_splice($tags, count($tags) - 1, 1);
-		$this->eso->addToHead("<meta name='description' content='" . sprintf($language["forumDescription"], $config["forumTitle"], implode(", ", $tags), $lastTag) . "'/>");
-		$this->eso->addToHead("<meta property='og:description' content='" . sprintf($language["forumDescription"], $config["forumTitle"], implode(", ", $tags), $lastTag) . "'/>");
-		$this->eso->addToHead("<meta name='twitter:description' content='" . sprintf($language["forumDescription"], $config["forumTitle"], implode(", ", $tags), $lastTag) . "'/>");
-		if (!$this->eso->user) $this->eso->addToFooter("<a id='forgotPassword' href='" . makeLink("forgot-password") . "'>{$language["Forgot your password"]}</a>");
-		if ($this->eso->user) $this->eso->addToFooter("<a id='markAsRead' href='" . makeLink("?markAsRead") . "'>{$language["Mark all conversations as read"]}</a>");
-		if ($this->eso->user) $this->eso->addToFooter("<a id='startConversation' href='" . makeLink("conversation/new") . "'>{$language["Start a conversation"]}</a>");
+		if (!empty($config["useForumDescription"])) {
+			$this->eso->addToHead("<meta name='description' content='" . sanitizeHTML($config["forumDescription"]) . "'/>");
+			$this->eso->addToHead("<meta property='og:description' content='" . sanitizeHTML($config["forumDescription"]) . "'/>");
+			$this->eso->addToHead("<meta name='twitter:description' content='" . sanitizeHTML($config["forumDescription"]) . "'/>");
+		} else {
+			$this->eso->addToHead("<meta name='description' content='" . sprintf($language["forumDescription"], $config["forumTitle"], implode(", ", $tags), $lastTag) . "'/>");
+			$this->eso->addToHead("<meta property='og:description' content='" . sprintf($language["forumDescription"], $config["forumTitle"], implode(", ", $tags), $lastTag) . "'/>");
+			$this->eso->addToHead("<meta name='twitter:description' content='" . sprintf($language["forumDescription"], $config["forumTitle"], implode(", ", $tags), $lastTag) . "'/>");
+		}
+		if (!$this->eso->user) $this->eso->addToFooter("<a id='forgotPassword' class='button buttonSmall' href='" . makeLink("forgot-password") . "'>{$language["Forgot your password"]}</a>", 100);
+		if ($this->eso->user) $this->eso->addToFooter("<a id='markAsRead' class='button buttonSmall' href='" . makeLink("?markAsRead") . "'>{$language["Mark all conversations as read"]}</a>", 200);
+		if ($this->eso->user) $this->eso->addToFooter("<a id='startConversation' class='button buttonSmall' href='" . makeLink("conversation/new") . "'>{$language["Start a conversation"]}</a>", 300);
 		
 		// If this is not technically the homepage (if it's a search page) the we don't want it to be indexed.
 		if (@$_GET["q1"] == "search") $this->eso->addToHead("<meta name='robots' content='noindex, noarchive'/>");
@@ -245,9 +272,12 @@ function getConversationIDs($search = "")
 	if (!$this->eso->user) $this->condition("conversations", "c.posts!=0 AND c.private=0");
 	else $this->condition("conversations", "c.startMember={$this->eso->user["memberId"]} OR (c.posts>0 AND (c.private=0 OR EXISTS (SELECT allowed FROM {$config["tablePrefix"]}status WHERE conversationId=c.conversationId AND memberId IN ('{$this->eso->user["account"]}',{$this->eso->user["memberId"]}) AND allowed=1)))");
 	
-	// Process the search string into individial terms, but only keep the first 10 terms!
+	// Process the search string into individial terms.
+	// Replace all "-" signs with "+!", and then split the string by "+".  Negated terms will then be prefixed with "!".
+	// Only keep the first 5 terms, just to keep the load on the database down!
 	$terms = !empty($search) ? explode("+", strtolower(str_replace("-", "+!", trim($search, " +-")))) : array();
-	$terms = array_slice($terms, 0, 10);
+//	$terms = array_slice($terms, 0, 10);
+	$terms = array_slice(array_filter($terms), 0, 5);
 	
 	// Take each term, match it with a gambit, and execute the gambit's function.
 	foreach ($terms as $term) {
@@ -615,6 +645,14 @@ function gambitMoreResults(&$search, $term, $negate)
 	if (!$negate) $search->limit($config["moreResults"]);
 }
 
+// Limit gambit: display a particular number of conversations.
+function gambitLimit(&$search, $term, $negate)
+{
+	global $language;
+	$term = trim(substr($term, strlen($language["gambits"]["limit:"])));
+	if (!$negate && is_numeric($term)) $search->limit($term);
+}
+
 // Draft gambit: get conversations which are drafts or contain a draft for the logged in user.
 function gambitDraft(&$search, $term, $negate)
 {
@@ -666,6 +704,7 @@ function gambitRandom(&$search, $term, $negate)
 function gambitReverse(&$search, $term, $negate)
 {
 	if (!$negate) $search->reverse = true;
+	$search->condition("conversations", "(c.lastPostTime) IS NOT NULL", $negate);
 }
 
 // Locked gambit: get conversations which are locked.

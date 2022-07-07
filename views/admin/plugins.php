@@ -1,11 +1,31 @@
 <?php
-// plugins.php
-// Displays a list of plugins and their settings.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * Plugins view: displays a list of plugins and their settings.
+ */
 if (!defined("IN_ESO")) exit;
 ?>
 
-<?php // Add a new plugin form. ?>
+<?php // If it's okay to upload plugin packages, add a new plugin form.
+if (!empty($config["uploadPackages"])): ?>
 <fieldset id='addPlugin'>
 <legend><?php echo $language["Add a new plugin"]; ?></legend>
 <?php echo $this->eso->htmlMessage("downloadPlugins", "https://geteso.org/plugins"); ?>
@@ -17,6 +37,14 @@ if (!defined("IN_ESO")) exit;
 </ul>
 </form>
 </fieldset>
+
+<?php // Otherwise if uploading packages is disabled, show a message.
+else: ?>
+<fieldset id='addPlugin'>
+<legend><?php echo $language["Add a new plugin"]; ?></legend>
+<?php echo $this->eso->htmlMessage("noUploadingPackages"); ?>
+</fieldset>
+<?php endif; ?>
 
 <?php // If there are installed plugins to display.
 if (count($this->plugins)): ?>
@@ -58,7 +86,7 @@ foreach ($this->plugins as $k => $plugin): ?>
 <div class='controls'>
 <?php if (!empty($plugin["settings"])): ?><a href='javascript:toggleSettings("<?php echo $k; ?>");void(0)'><?php echo $language["settings"]; ?></a><?php endif; ?>
 </div>
-<a href='<?php echo makeLink("admin", "plugins", "?toggle=$k", "&token={$_SESSION["token"]}"); ?>' class='toggle'><?php echo $plugin["loaded"] ? translate("Disable") : translate("Enable"); ?></a>	
+<a href='<?php echo makeLink("admin", "plugins", "?toggle=$k", "&token={$_SESSION["token"]}"); ?>' class='toggle'><?php echo $plugin["loaded"] ? $language["Disable"] : $language["Enable"]; ?></a>	
 <strong><?php echo $plugin["name"]; ?></strong>
 <small><?php printf($language["version"], $plugin["version"]); ?> <?php printf($language["author"], $plugin["author"]); ?></small> <small><?php echo $plugin["description"]; ?></small>
 
@@ -87,5 +115,8 @@ endif; ?>
 
 <?php // Otherwise if there are no plugins installed, show a message.
 else: ?>
+<fieldset id='addPlugin'>
+<legend><?php echo $language["Add a new plugin"]; ?></legend>
 <?php echo $this->eso->htmlMessage("noPluginsInstalled"); ?>
+</fieldset>
 <?php endif; ?>

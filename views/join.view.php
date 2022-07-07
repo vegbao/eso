@@ -1,9 +1,38 @@
 <?php
-// join.view.php
-// Displays an interface enabling users to sign up as members.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * Join view: displays an interface enabling users to sign up as members.
+ */
 if(!defined("IN_ESO"))exit;
 ?>
+
+<?php
+// If the user can't sign up, inform them with an error message.
+if(($error=$this->canJoin())!==true):
+echo $this->eso->htmlMessage($error);
+
+// If they can, show the form.
+else:
+?>
+
 <form action='<?php echo makeLink("join");?>' method='post' id='join'>
 	
 <?php
@@ -46,3 +75,5 @@ Join.init();
 </script>
 
 </form>
+
+<?php endif;?>

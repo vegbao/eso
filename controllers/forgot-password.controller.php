@@ -1,9 +1,29 @@
 <?php
-// forgot-password.controller.php
-// Sends a user an e-mail containing a link to reset their password, and handles this link to enable the user to set a new password.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Forgot password controller: sends a user an email containing a link to
+ * reset their password, and handles this link to enable the user to set
+ * a new password.
+ */
 class forgotpassword extends Controller {
 
 var $view = "forgotPassword.view.php";
@@ -42,8 +62,9 @@ function init()
 			
 			// If it's all good, update the password in the database, show a success message, and redirect.
 			if (!count($this->errors)) {
-				$passwordHash = md5($config["salt"] . $password);
-				$this->eso->db->query("UPDATE {$config["tablePrefix"]}members SET resetPassword=NULL, password='$passwordHash' WHERE memberId=$memberId");
+				$salt = generateRandomString(32);
+				$passwordHash = md5($salt . $password);
+				$this->eso->db->query("UPDATE {$config["tablePrefix"]}members SET resetPassword=NULL, password='$passwordHash', salt='$salt' WHERE memberId=$memberId");
 				$this->eso->message("passwordChanged", false);
 				redirect("");
 			}
@@ -52,6 +73,43 @@ function init()
 	
 	// If they've submitted their email to get a password reset link, email one to them!
 	if (isset($_POST["email"])) {
+
+		// If we're counting logins per minute, impose some flood control measures.
+		if (!isset($cookie) and $config["loginsPerMinute"] > 0) {
+
+			// If we have a record of their logins in the session, check how many logins they've performed in the last
+			// minute.
+			if (!empty($_SESSION["logins"])) {
+				// Clean anything older than 60 seconds out of the logins array.
+				foreach ($_SESSION["logins"] as $k => $v) {
+					if ($v < time() - 60) unset($_SESSION["logins"][$k]);
+				}
+				// Have they performed >= $config["loginsPerMinute"] logins in the last minute? If so, don't continue.
+				if (count($_SESSION["logins"]) >= $config["loginsPerMinute"]) {
+					$this->eso->message("waitToLogin", true, array(60 - time() + min($_SESSION["logins"])));
+					return;
+				}
+			}
+
+			// However, if we don't have a record in the session, use the MySQL logins table.
+			else {
+				// Get the user's IP address.
+				$ip = (int)ip2long($_SESSION["ip"]);
+				// Have they performed >= $config["loginsPerMinute"] logins in the last minute?
+				if ($this->eso->db->result("SELECT COUNT(*) FROM {$config["tablePrefix"]}logins WHERE ip=$ip AND loginTime>UNIX_TIMESTAMP()-60", 0) >= $config["loginsPerMinute"]) {
+					$this->eso->message("waitToLogin", true, 60);
+					return;
+				}
+				// Log this attempt in the logins table.
+				$this->eso->db->query("INSERT INTO {$config["tablePrefix"]}logins (ip, loginTime) VALUES ($ip, UNIX_TIMESTAMP())");
+				// Proactively clean the logins table of logins older than 60 seconds.
+				$this->eso->db->query("DELETE FROM {$config["tablePrefix"]}logins WHERE loginTime<UNIX_TIMESTAMP()-60");
+			}
+
+			// Log this attempt in the session array.
+			if (!isset($_SESSION["logins"]) or !is_array($_SESSION["logins"])) $_SESSION["logins"] = array();
+			$_SESSION["logins"][] = time();
+		}
 		
 		// Find the member with this email.
 		$result = $this->eso->db->query("SELECT memberId, name, email FROM {$config["tablePrefix"]}members WHERE email='{$_POST["email"]}'");

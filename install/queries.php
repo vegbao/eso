@@ -1,7 +1,27 @@
 <?php
-// queries.php
-// Contains all the queries to create the forum's tables and insert default data.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * Installer queries: contains all the queries to create the forum's
+ * tables and insert default data.
+ */
 if (!defined("IN_ESO")) exit;
 
 $queries = array();
@@ -58,7 +78,7 @@ $queries[] = "CREATE TABLE {$config["tablePrefix"]}status (
 	lastRead smallint unsigned NOT NULL default '0',
 	draft text,
 	PRIMARY KEY  (conversationId, memberId)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8";
+) ENGINE=InnoDB DEFAULT CHARSET=utf8";
 
 // Create the members table.
 $queries[] = "DROP TABLE IF EXISTS {$config["tablePrefix"]}members";
@@ -67,6 +87,7 @@ $queries[] = "CREATE TABLE {$config["tablePrefix"]}members (
 	name varchar(31) NOT NULL,
 	email varchar(63) NOT NULL,
 	password char(32) NOT NULL,
+	salt char(32) NOT NULL,
 	color tinyint unsigned NOT NULL default '1',
 	account enum('Administrator','Moderator','Member','Suspended','Unvalidated') NOT NULL default 'Unvalidated',
 	language varchar(31) default '',
@@ -83,8 +104,9 @@ $queries[] = "CREATE TABLE {$config["tablePrefix"]}members (
 	PRIMARY KEY  (memberId),
 	UNIQUE KEY members_name (name),
 	UNIQUE KEY members_email (email),
-	KEY members_password (password)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8";
+	KEY members_password (password),
+	KEY members_salt (salt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8";
 
 // Create the tags table.
 $queries[] = "DROP TABLE IF EXISTS {$config["tablePrefix"]}tags";
@@ -92,7 +114,7 @@ $queries[] = "CREATE TABLE {$config["tablePrefix"]}tags (
 	tag varchar(31) NOT NULL,
 	conversationId int unsigned NOT NULL,
 	PRIMARY KEY  (conversationId, tag)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8";
+) ENGINE=InnoDB DEFAULT CHARSET=utf8";
 
 // Create the searches table.
 $queries[] = "DROP TABLE IF EXISTS {$config["tablePrefix"]}searches";
@@ -101,10 +123,18 @@ $queries[] = "CREATE TABLE {$config["tablePrefix"]}searches (
 	searchTime int unsigned NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8";
 
+// Create the logins table.
+$queries[] = "DROP TABLE IF EXISTS {$config["tablePrefix"]}logins";
+$queries[] = "CREATE TABLE {$config["tablePrefix"]}logins (
+	ip int unsigned NOT NULL,
+	loginTime int unsigned NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8";
+
 // Create the account for the administrator.
+$salt = generateRandomString(32);
 $color = rand(1, 27);
-$queries[] = "INSERT INTO {$config["tablePrefix"]}members (memberId, name, email, password, color, account) VALUES 
-(1, '{$_SESSION["install"]["adminUser"]}', '{$_SESSION["install"]["adminEmail"]}', '" . md5($config["salt"] . $_SESSION["install"]["adminPass"]) . "', $color, 'Administrator')";
+$queries[] = "INSERT INTO {$config["tablePrefix"]}members (memberId, name, email, password, salt, color, account) VALUES 
+(1, '{$_SESSION["install"]["adminUser"]}', '{$_SESSION["install"]["adminEmail"]}', '" . md5($salt . $_SESSION["install"]["adminPass"]) . "', '$salt', $color, 'Administrator')";
 
 // Create default conversations.
 $time = time();

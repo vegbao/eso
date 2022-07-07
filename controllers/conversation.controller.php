@@ -1,9 +1,28 @@
 <?php
-// conversation.controller.php
-// Controls anything to do with the conversation view: posting, editing, pagination, deleting, etc.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Conversation controller: controls anything to do with the conversation
+ * view; posting, editing, pagination, deleting, etc.
+ */
 class conversation extends Controller {
 
 var $view = "conversation.view.php";
@@ -33,7 +52,7 @@ function init()
 	$this->conversation["membersAllowed"] =& $this->getMembersAllowed();
 
 	// Add essential variables and language definitions to be accessible through JavaScript. 
-	$this->eso->addLanguageToJS("Starred", "Unstarred", "Lock", "Unlock", "Sticky", "Unsticky", "Moderator", "Moderator-plural", "Administrator", "Administrator-plural", "Member", "Member-plural", "Suspended", "confirmLeave", "confirmDiscard", "confirmDeleteConversation", "Never", "Just now", "year ago", "years ago", "month ago", "months ago", "week ago", "weeks ago", "day ago", "days ago", "hour ago", "hours ago", "minute ago", "minutes ago", "second ago", "seconds ago");
+	$this->eso->addLanguageToJS("Starred", "Unstarred", "Lock", "Unlock", "Sticky", "Unsticky", "Moderator", "Moderator-plural", "Administrator", "Administrator-plural", "Member", "Member-plural", "Suspended", "Unvalidated", "confirmLeave", "confirmDiscard", "confirmDeleteConversation", "Never", "Just now", "year ago", "years ago", "month ago", "months ago", "week ago", "weeks ago", "day ago", "days ago", "hour ago", "hours ago", "minute ago", "minutes ago", "second ago", "seconds ago");
 	$this->eso->addVarToJS("postsPerPage", $config["postsPerPage"]);
 	$this->eso->addVarToJS("autoReloadIntervalStart", $config["autoReloadIntervalStart"]);
 	$this->eso->addVarToJS("autoReloadIntervalMultiplier", $config["autoReloadIntervalMultiplier"]);	
@@ -64,13 +83,13 @@ function init()
 			// post.
 			if (!$id) $this->conversation["draft"] = $_POST["content"];
 			// Otherwise, redirect to the newly-created conversation!
-			else redirect($this->conversation["id"], $this->conversation["slug"]);
+			else redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]));
 		}
 			
 		// Save a draft in an existing conversation.
 		elseif (isset($_POST["saveDraft"])) {
 			$this->saveDraft($_POST["content"]);
-			redirect($this->conversation["id"], $this->conversation["slug"], "?start={$_GET["start"]}", "#reply");
+			redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start={$_GET["start"]}", "#reply");
 		}
 			
 		// Add a reply to an existing conversation.
@@ -81,7 +100,7 @@ function init()
 			if (!$id) $this->conversation["draft"] = $_POST["content"];
 			
 			// Otherwise, redirect so that the new reply is visible.
-			else redirect($this->conversation["id"], $this->conversation["slug"], "?start=" . max(0, $this->conversation["postCount"] - $config["postsPerPage"]), "#p$id");
+			else redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=" . max(0, $this->conversation["postCount"] - $config["postsPerPage"]), "#p$id");
 		}
 	}
 
@@ -97,17 +116,34 @@ function init()
 		}
 		// Otherwise, discard the draft and redirect.
 		$this->discardDraft();
-		redirect($this->conversation["id"], $this->conversation["slug"], "?start={$_GET["start"]}", "#reply");
+		redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start={$_GET["start"]}", "#reply");
 	}
 
 	// If the conversation does exist...
 	if ($this->conversation["id"]) {
 	
-		// If the slug in the URL is not the same as the actual slug, redirect.
-		if (@$_GET["q3"] != $this->conversation["slug"]) {
+		// If we're not using pretty URLs, redirect if there is a slug in the URL.
+		// If we are using pretty URLs, make sure that the slug in the URL is the same as the actual slug using conversationLink().
+		if (empty($config["usePrettyURLs"]) && !empty(@$_GET["q3"])) {
 			header("HTTP/1.1 301 Moved Permanently");
-			redirect($this->conversation["id"], $this->conversation["slug"], !empty($_GET["start"]) ? "?start={$_GET["start"]}" : "");
+			redirect($this->conversation["id"], !empty($_GET["start"]) ? "?start={$_GET["start"]}" : "");
 		}
+		elseif (!empty($config["usePrettyURLs"]) && @$_GET["q2"] != conversationLink($this->conversation["id"], $this->conversation["slug"])) {
+			header("HTTP/1.1 301 Moved Permanently");
+			redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), !empty($_GET["start"]) ? "?start={$_GET["start"]}" : "");
+		}
+		
+		// If the slug in the URL is not the same as the actual slug, redirect.
+//		if (@$_GET["q3"] != $this->conversation["slug"]) {
+//			header("HTTP/1.1 301 Moved Permanently");
+//			redirect($this->conversation["id"], $this->conversation["slug"], !empty($_GET["start"]) ? "?start={$_GET["start"]}" : "");
+//		}
+		
+		// If there is a slug in the URL, redirect.
+//		if (!empty(@$_GET["q3"])) {
+//			header("HTTP/1.1 301 Moved Permanently");
+//			redirect($this->conversation["id"], !empty($_GET["start"]) ? "?start={$_GET["start"]}" : "");
+//		}
 		
 		// Work out which post we are starting from.
 		if (!empty($_GET["start"])) {
@@ -118,14 +154,14 @@ function init()
 					$this->startFrom = max(0, min($this->conversation["lastRead"], $this->conversation["postCount"] - $config["postsPerPage"]));
 					$limit = (int)$this->conversation["lastRead"];
 					$postId = $this->eso->db->result($this->eso->db->query("SELECT postId FROM {$config["tablePrefix"]}posts WHERE conversationId={$this->conversation["id"]} ORDER BY time ASC LIMIT $limit, 1"), 0);
-					redirect($this->conversation["id"], $this->conversation["slug"], "?start=$this->startFrom", "#p$postId");
+					redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=$this->startFrom", "#p$postId");
 					break;
 
 				// Last: redirect to the last post in the conversation.
 				case "last":
 					$this->startFrom = max(0, $this->conversation["postCount"] - $config["postsPerPage"]);
 					$postId = $this->eso->db->result($this->eso->db->query("SELECT MAX(postId) FROM {$config["tablePrefix"]}posts WHERE conversationId={$this->conversation["id"]}"), 0);
-					redirect($this->conversation["id"], $this->conversation["slug"], "?start=$this->startFrom", "#p$postId");
+					redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=$this->startFrom", "#p$postId");
 					break;
 
 				// With any luck, we can just use the start number in the URL.
@@ -160,19 +196,19 @@ function init()
 			$this->editingPost = (int)$_GET["editPost"];
 			// If the form was submitted, update the db and go back to the normal view.
 			if ((isset($_POST["save"]) and $this->editPost($this->editingPost, $_POST["content"])) or isset($_POST["cancel"]))
-				redirect($this->conversation["id"], $this->conversation["slug"], "?start=$this->startFrom");
+				redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=$this->startFrom");
 		}
 
 		// Delete a post.
 		if (isset($_GET["deletePost"]) and $this->eso->validateToken(@$_GET["token"])) {
 			$this->deletePost((int)$_GET["deletePost"]);
-			redirect($this->conversation["id"], $this->conversation["slug"], "?start=$this->startFrom");
+			redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=$this->startFrom");
 		}
 
 		// Restore a post.
 		if (isset($_GET["restorePost"]) and $this->eso->validateToken(@$_GET["token"])) {
 			$this->restorePost((int)$_GET["restorePost"]);
-			redirect($this->conversation["id"], $this->conversation["slug"], "?start=$this->startFrom");
+			redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=$this->startFrom");
 		}
 		
 		// Show a deleted post: set the $this->showingDeletedPost variable so that the post body is outputted later on.
@@ -181,20 +217,20 @@ function init()
 		// Toggle sticky.
 		if (isset($_GET["toggleSticky"]) and $this->eso->validateToken(@$_GET["token"])) {
 			$this->toggleSticky();
-			redirect($this->conversation["id"], $this->conversation["slug"], "?start=$this->startFrom");
+			redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=$this->startFrom");
 		}
 
 		// Toggle locked.
 		if (isset($_GET["toggleLock"]) and $this->eso->validateToken(@$_GET["token"])) {
 			$this->toggleLock();
-			redirect($this->conversation["id"], $this->conversation["slug"], "?start=$this->startFrom");
+			redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=$this->startFrom");
 		}
 		
 		// Update the conversation title/tags.
 		if (isset($_POST["saveTitleTags"]) and $this->eso->validateToken(@$_POST["token"])) {
 			$this->saveTitle($_POST["cTitle"]);
 			$this->saveTags($_POST["cTags"]);
-			redirect($this->conversation["id"], $this->conversation["slug"], "?start=$this->startFrom");
+			redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=$this->startFrom");
 		}
 		
 		// Change a member's group.
@@ -212,21 +248,21 @@ function init()
 			foreach ($align as $k => $v)
 				$avatarAlignmentOptions .= "<option value='$k'" . (@$_SESSION["avatarAlignment"] == $k ? " selected='selected'" : "") . ">$v</option>";
 			// Add it to the bar.
-			$this->eso->addToBar("right", "<form action='" . curLink() . "' method='post' id='nav-dpav'><div><input type='hidden' name='token' value='{$_SESSION["token"]}'/>{$language["Display avatars"]}<select onchange='Conversation.changeAvatarAlignment(this.value)' name='avatarAlignment'>$avatarAlignmentOptions</select> <noscript><div style='display:inline'>" . $this->eso->skin->button(array("value" => $language["Save changes"])) . "</div></noscript></div></form>", 100);
+			$this->eso->addToBar("right", "<form action='" . curLink() . "' method='post' id='displayAvatars'><div><input type='hidden' name='token' value='{$_SESSION["token"]}'/>{$language["Display avatars"]}<select onchange='Conversation.changeAvatarAlignment(this.value)' name='avatarAlignment'>$avatarAlignmentOptions</select> <noscript><div style='display:inline'>" . $this->eso->skin->button(array("value" => $language["Save changes"])) . "</div></noscript></div></form>", 100);
 		}
 
 		// Add links to the bar.
 		// Add the RSS feed button.
-		$this->eso->addToBar("right", "<a href='" . makeLink("feed", "conversation", $this->conversation["id"]) . "' id='rss'><span class='button'><input type='submit' value='{$language["RSS"]}'></span></a>", 500);
+		$this->eso->addToBar("right", "<a href='" . makeLink("feed", "conversation", $this->conversation["id"]) . "' id='rss'><span class='button buttonSmall'><input type='submit' value='{$language["RSS"]}'></span></a>", 500);
 		
 		// Add the sticky/unsticky link if the user has permission.
-		if ($this->canSticky() === true) $this->eso->addToBar("right", "<a href='" . makeLink($this->conversation["id"], $this->conversation["slug"], "?toggleSticky", $this->startFrom ? "&start=$this->startFrom" : "", "&token={$_SESSION["token"]}") . "' onclick='Conversation.toggleSticky();return false'><span class='button'><input type='submit' id='stickyLink' value='" . $language[in_array("sticky", $this->conversation["labels"]) ? "Unsticky" : "Sticky"] . "'></span></a>", 400);
+		if ($this->canSticky() === true) $this->eso->addToBar("right", "<a href='" . makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?toggleSticky", $this->startFrom ? "&start=$this->startFrom" : "", "&token={$_SESSION["token"]}") . "' onclick='Conversation.toggleSticky();return false'><span class='button buttonSmall'><input type='submit' id='stickyLink' value='" . $language[in_array("sticky", $this->conversation["labels"]) ? "Unsticky" : "Sticky"] . "'></span></a>", 400);
 		
 		// Add the lock/unlock link if the user has permission.
-		if ($this->canLock() === true) $this->eso->addToBar("right", "<a href='" . makeLink($this->conversation["id"], $this->conversation["slug"], "?toggleLock", $this->startFrom ? "&start=$this->startFrom" : "", "&token={$_SESSION["token"]}") . "' onclick='Conversation.toggleLock();return false'><span class='button'><input type='submit' id='lockLink' value='" . $language[$this->conversation["locked"] ? "Unlock" : "Lock"] . "'></span></a>", 300);
+		if ($this->canLock() === true) $this->eso->addToBar("right", "<a href='" . makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?toggleLock", $this->startFrom ? "&start=$this->startFrom" : "", "&token={$_SESSION["token"]}") . "' onclick='Conversation.toggleLock();return false'><span class='button buttonSmall'><input type='submit' id='lockLink' value='" . $language[$this->conversation["locked"] ? "Unlock" : "Lock"] . "'></span></a>", 300);
 		
 		// Add the delete conversation link if the user has permission.
-		if ($this->canDeleteConversation() === true) $this->eso->addToBar("right", "<a href='" . makeLink($this->conversation["id"], $this->conversation["slug"], "?delete", "&token={$_SESSION["token"]}") . "' onclick='return Conversation.deleteConversation()'><span class='button'><input type='submit' value='{$language["Delete conversation"]}'></span></a>", 200);
+		if ($this->canDeleteConversation() === true) $this->eso->addToBar("right", "<a href='" . makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?delete", "&token={$_SESSION["token"]}") . "' onclick='return Conversation.deleteConversation()'><span class='button buttonSmall'><input type='submit' value='{$language["Delete conversation"]}'></span></a>", 200);
 		
 		// Update the user's last action.
 		$this->updateLastAction();
@@ -236,9 +272,9 @@ function init()
 		if (strlen($description) > 255) $description = substr($description, 0, strrpos($description, " ")) . " ...";
 		$description = strip_tags(str_replace(array("</p>", "</h3>", "</pre>"), " ", $description));
 		$this->eso->addToHead("<meta name='keywords' content='" . str_replace(", ", ",", $this->conversation["tags"]) . "'/>");
-		$this->eso->addToHead("<meta name='description' content='$description'/>");
-		$this->eso->addToHead("<meta property='og:description' content='$description'/>");
-		$this->eso->addToHead("<meta name='twitter:description' content='$description'/>");
+		$this->eso->addToHead("<meta name='description' content='".sanitizeHTML($description)."'/>");
+		$this->eso->addToHead("<meta property='og:description' content='".sanitizeHTML($description)."'/>");
+		$this->eso->addToHead("<meta name='twitter:description' content='".sanitizeHTML($description)."'/>");
 		
 		// Add JavaScript variables which contain conversation information.
 		$this->eso->addVarToJS("conversation", array(
@@ -286,7 +322,7 @@ function init()
 	// Remove a member from the membersAllowed list.
 	if (isset($_GET["removeMember"]) and $this->eso->validateToken(@$_GET["token"])) {
 		$this->removeMember($_GET["removeMember"]);
-		redirect($this->conversation["id"], $this->conversation["slug"], "?start=$this->startFrom");
+		redirect(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?start=$this->startFrom");
 	}
 
 	// If the add member form has been submitted, attempt to add the member.
@@ -380,7 +416,7 @@ function ajax()
 				"draft" => @$_POST["draft"],
 				"content" => @$_POST["content"]
 			))) return;
-			return array("redirect" => $config["baseURL"] . makeLink($conversationId, $this->conversation["slug"]));
+			return array("redirect" => $config["baseURL"] . makeLink(conversationLink($conversationId, $this->conversation["slug"])));
 			break;
 
 		// Save a draft.
@@ -714,6 +750,7 @@ function getPosts($criteria = array(), $display = false)
 			"accounts" => $this->eso->canChangeGroup($post["memberId"], $post["account"]),
 			"body" => $display ? $this->displayPost($post["content"]) : $post["content"],
 			"avatar" => $this->eso->getAvatar($post["memberId"], $post["avatarFormat"]),
+			"thumb" => $this->eso->getAvatar($post["memberId"], $post["avatarFormat"], "thumb"),
 			"editMember" => $post["editMember"],
 			"lastAction" => strip_tags($post["lastAction"])
 		// Extra information if the post *has* been deleted.
@@ -803,7 +840,7 @@ function addReply($content, $newConversation = false)
 		global $versions;
 		while (list($name, $email, $language) = $this->eso->db->fetchRow($result)) {
 			include "languages/" . sanitizeFileName(file_exists("languages/$language.php") ? $language : $config["language"]) . ".php";
-			sendEmail($email, vsprintf($language["emails"]["newReply"]["subject"], array($name, $this->conversation["title"])), vsprintf($language["emails"]["newReply"]["body"], array($name, $this->eso->user["name"], $this->conversation["title"], $config["baseURL"] . makeLink($this->conversation["id"], $this->conversation["slug"], "unread"))));
+			sendEmail($email, vsprintf($language["emails"]["newReply"]["subject"], array($name, $this->conversation["title"])), vsprintf($language["emails"]["newReply"]["body"], array($name, $this->eso->user["name"], $this->conversation["title"], $config["baseURL"] . makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]), "unread"))));
 			unset($langauge, $messages);
 		}
 	}
@@ -971,8 +1008,13 @@ function displayPost($content)
 function validatePost($post)
 {
 	global $config;
-	if (strlen($post) > $config["maxCharsPerPost"]) return "postTooLong";
-	if (!strlen($post)) return "emptyPost";
+	if (function_exists('mb_strlen')) { // Use multibytes for UTF-8 support.
+		if (mb_strlen($post, "UTF-8") > $config["maxCharsPerPost"]) return "postTooLong";
+		if (!mb_strlen($post, "UTF-8")) return "emptyPost";
+	} else {
+		if (strlen($post) > $config["maxCharsPerPost"]) return "postTooLong";
+		if (!strlen($post)) return "emptyPost";
+	}
 	return $this->callHook("validatePost", array(&$post), true);
 }
 
@@ -980,7 +1022,7 @@ function validatePost($post)
 function deletePost($postId)
 {
 	// Don't even bother trying if they're not logged in.
-	if (!$this->eso->user) {
+	if (!$this->eso->user or $this->eso->isUnvalidated()) {
 		$this->eso->message("noPermission");
 		return false;
 	}
@@ -1014,7 +1056,7 @@ function deletePost($postId)
 function restorePost($postId)
 {
 	// Don't even bother trying if they're not logged in.
-	if (!$this->eso->user) {
+	if (!$this->eso->user or $this->eso->isUnvalidated()) {
 		$this->eso->message("noPermission");
 		return false;
 	}	
@@ -1174,11 +1216,11 @@ function addMember($name)
 	if (!$memberId) {
 		switch (strtolower($name)) {
 			// Members
-			// case $language["Member-plural"]:
-			// case "members":
-			//	$memberId = "Member";
-			//	$memberName = $language["Member-plural"];
-			//	break;
+			case $language["Member-plural"]:
+			case "members":
+				$memberId = "Member";
+				$memberName = $language["Member-plural"];
+				break;
 			// Moderators
 			case $language["Moderator-plural"]:
 			case "moderators":
@@ -1300,7 +1342,7 @@ function emailPrivateAdd($memberIds, $emailAll = false)
 	global $versions;
 	while (list($name, $email, $language) = $this->eso->db->fetchRow($result)) {
 		include "languages/" . sanitizeFileName(file_exists("languages/$language.php") ? $language : $config["language"]) . ".php";
-		$args = array($name, $this->conversation["title"], $config["baseURL"] . makeLink($this->conversation["id"], $this->conversation["slug"]));
+		$args = array($name, $this->conversation["title"], $config["baseURL"] . makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"])));
 		sendEmail($email, vsprintf($language["emails"]["privateAdd"]["subject"], $args), vsprintf($language["emails"]["privateAdd"]["body"], $args));
 		unset($language, $messages);
 	}
@@ -1327,7 +1369,7 @@ function htmlMembersAllowedList($membersAllowed)
 			// If the user can edit the list, output a link for this member.
 			// However, if there is more than one member, the conversation starter can't be removed.
 			if ($this->canEditMembersAllowed() and ($count == 1 or $memberId != $this->conversation["startMember"]))
-				$html .= "<a href='" . makeLink($this->conversation["id"], $this->conversation["slug"], "?removeMember=$memberId&token={$_SESSION["token"]}") . "' class='d' onclick='Conversation.removeMember(\"$memberId\");return false'>$name</a>, ";
+				$html .= "<a href='" . makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]), "?removeMember=$memberId&token={$_SESSION["token"]}") . "' class='d' onclick='Conversation.removeMember(\"$memberId\");return false'>$name</a>, ";
 				
 			// Otherwise, plain text will do.
 			else $html .= "$name, ";
@@ -1407,7 +1449,7 @@ function linkTags($tags)
 {
 	$tags = explode(", ", $tags);
 	foreach ($tags as $k => $tag) $tags[$k] = "<a href='" . makeLink("search", "?q2=tag:$tag") . "'>$tag</a>";
-	return implode(", ", $tags);
+	return implode(" ", $tags);
 }
 
 // Remove quotes from a post to prevent nested quotes when quoting the post.
@@ -1450,6 +1492,7 @@ function validateTitle(&$title)
 {
 	$title = substr($title, 0, 63);
 	if (!strlen($title)) return "emptyTitle";
+//	if (strpos($title, '0') === 0) return "emptyTitle";
 	return $this->callHook("validateTitle", array(&$title), true);
 }
 
@@ -1469,7 +1512,7 @@ function updateLastAction()
 	global $language;
 	$this->eso->updateLastAction("{$language["Viewing"]} " . (($this->conversation["private"] or $this->conversation["postCount"] == 0)
 		? $language["a private conversation"]
-		: "<a href='" . makeLink($this->conversation["id"], $this->conversation["slug"]) . "'>{$this->conversation["title"]}</a>"));
+		: "<a href='" . makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"])) . "'>{$this->conversation["title"]}</a>"));
 }
 
 // To edit tags, user must be: conversation starter or >=moderator
@@ -1506,6 +1549,7 @@ function canLock()
 function canReply()
 {
 	if (!$this->eso->user) return "loginRequired";
+	if ($this->eso->isUnvalidated()) return "noPermission";
 	if ($this->eso->isSuspended()) return "suspended";
 	if ($this->conversation["locked"] and !$this->eso->user["moderator"]) return "locked";
 	return true;
@@ -1529,6 +1573,7 @@ function canEditPost($postId, $memberId = false, $account = false, $deleteMember
 function canStartConversation()
 {
 	if (!$this->eso->user) return "loginRequired";
+	if ($this->eso->isUnvalidated()) return "noPermission";
 	if ($this->eso->isSuspended()) return "suspended";
 	return true;
 }

@@ -1,9 +1,28 @@
 <?php
-// settings.controller.php
-// Handles the "My settings" page.  Changes avatar, color, and handles settings forms.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Settings controller: handles the 'my settings' page.  Changes avatar,
+ * color, and handles settings forms.
+ */
 class settings extends Controller {
 	
 var $view = "settings.view.php";
@@ -16,7 +35,7 @@ function init()
 	if (!$this->eso->user) redirect("join");
 	
 	// Set the title.
-	global $language;
+	global $config, $language;
 	$this->title = $language["My settings"];	
 	
 	// Change the user's color.
@@ -24,7 +43,7 @@ function init()
 		and $this->eso->validateToken(@$_GET["token"])) $this->changeColor($_GET["changeColor"]);
 	
 	// Change the user's avatar.
-	if (isset($_POST["changeAvatar"])
+	if (!empty($config["changeAvatar"]) and isset($_POST["changeAvatar"])
 	 	and $this->eso->validateToken(@$_POST["token"])
 		and $this->changeAvatar()) $this->eso->message("changesSaved");
 	
@@ -33,6 +52,16 @@ function init()
 		and $this->eso->validateToken(@$_POST["token"])
 		and $this->changePasswordEmail()) {
 		$this->eso->message("changesSaved");
+		redirect("settings");
+	}
+
+	// Change the user's name.
+	if (!empty($config["changeUsername"]) and isset($_POST["settingsUsername"]["submit"])
+		and $this->eso->validateToken(@$_POST["token"])
+		and $this->changeUsername()) {
+		$this->eso->message("changesSaved");
+		// Unset the user's session to keep things from... breaking!
+		unset($_SESSION["user"]);
 		redirect("settings");
 	}
 	
@@ -161,24 +190,60 @@ function saveSettings()
 	return true;
 }
 
+function changeUsername()
+{
+	global $config;
+	$updateData = array();
+	$salt = $this->eso->db->result("SELECT salt FROM {$config["tablePrefix"]}members WHERE memberId={$this->eso->user["memberId"]}", 0);
+
+	// Are we setting a new username?
+	if (!empty($_POST["settingsUsername"]["name"])) {
+
+		// Validate the name, then add the updating part to the query.
+		$name = substr($_POST["settingsUsername"]["name"], 0, 31);
+		if ($error = validateName($name)) $this->messages["username"] = $error;
+		else $updateData["name"] = "'{$_POST["settingsUsername"]["name"]}'";
+//		$this->messages["current"] = "reenterInformation";
+	}
+
+	// Check if the user entered their old password correctly.
+	if (!$this->eso->db->result("SELECT 1 FROM {$config["tablePrefix"]}members WHERE memberId={$this->eso->user["memberId"]} AND password='" . md5($salt . $_POST["settingsUsername"]["password"]) . "'", 0)) $this->messages["password"] = "incorrectPassword";
+
+	// Everything is valid and good to go! Run the query if necessary.
+	elseif (count($updateData)) {
+		$query = $this->eso->db->constructUpdateQuery("members", $updateData, array("memberId" => $this->eso->user["memberId"]));
+		$this->eso->db->query($query);
+		$this->messages = array();
+		return true;
+	}
+
+	return false;
+}
+
 // Change the user's password and/or email.
 function changePasswordEmail()
 {
 	global $config;
 	$updateData = array();
+	$salt = $this->eso->db->result("SELECT salt FROM {$config["tablePrefix"]}members WHERE memberId={$this->eso->user["memberId"]}", 0);
+	$newSalt = generateRandomString(32);
 	
 	// Are we setting a new password?
 	if (!empty($_POST["settingsPasswordEmail"]["new"])) {
 		
-		// Make a copy of the raw password; the validatePassword() function will automatically format it into a hash.
-		$hash = $_POST["settingsPasswordEmail"]["new"];
-		if ($error = validatePassword($hash)) $this->messages["new"] = $error;
+		// Make a copy of the raw password and format it into a hash.
+		$password = $_POST["settingsPasswordEmail"]["new"];
+		$hash = md5($newSalt . $password);
+		if ($error = validatePassword($password)) $this->messages["new"] = $error;
 		
 		// Do both of the passwords entered match?
 		elseif ($_POST["settingsPasswordEmail"]["new"] != $_POST["settingsPasswordEmail"]["confirm"]) $this->messages["confirm"] = "passwordsDontMatch";
 		
 		// Alright, the password stuff is all good. Add the password updating part to the query.
-		else $updateData["password"] = "'$hash'";
+		else {
+			$updateData["password"] = "'$hash'";
+			$updateData["salt"] = "'$newSalt'";
+		}
 		
 		// Show a 'reenter information' message next to the current password field just in case we fail later on.
 		$this->messages["current"] = "reenterInformation"; 
@@ -195,7 +260,7 @@ function changePasswordEmail()
 	}
 	
 	// Check if the user entered their old password correctly.
-	if (!$this->eso->db->result("SELECT 1 FROM {$config["tablePrefix"]}members WHERE memberId={$this->eso->user["memberId"]} AND password='" . md5($config["salt"] . $_POST["settingsPasswordEmail"]["current"]) . "'", 0)) $this->messages["current"] = "incorrectPassword";
+	if (!$this->eso->db->result("SELECT 1 FROM {$config["tablePrefix"]}members WHERE memberId={$this->eso->user["memberId"]} AND password='" . md5($salt . $_POST["settingsPasswordEmail"]["current"]) . "'", 0)) $this->messages["current"] = "incorrectPassword";
 	
 	// Everything is valid and good to go! Run the query if necessary.
 	elseif (count($updateData)) {
@@ -211,6 +276,8 @@ function changePasswordEmail()
 // Change the user's avatar.
 function changeAvatar()
 {
+	if (!$this->eso->user or $this->eso->isUnvalidated()) return false;
+	if ($this->eso->isSuspended()) return false;
 	if (empty($_POST["avatar"]["type"])) return false;
 	global $config;
 	
@@ -430,7 +497,7 @@ function changeColor($color)
 	global $config;
 	
 	// Make sure the color exists within the current skin!
-	$color = max(1, min((int)$color, $this->eso->skin->numberOfColors));
+	$color = max(0, min((int)$color, $this->eso->skin->numberOfColors));
 
 	// Update the database and session variables with the new color.
 	$this->eso->db->query("UPDATE {$config["tablePrefix"]}members SET color=$color WHERE memberId={$this->eso->user["memberId"]}");

@@ -1,30 +1,47 @@
 <?php
-// join.controller.php
-// Handles the "Join this forum" page.  Defines form data, validates it, and adds the member to the database.
-// Also handles the link from the verification e-mail.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Join controller: handles the 'join this forum' page. Defines form
+ * data, validates it, adds the member to the database, and handles the
+ * link from the verification email.
+ */
 class join extends Controller {
 
 var $view = "join.view.php";
-
-// Reserved user names which cannot be used.
-var $reservedNames = array("guest", "member", "members", "moderator", "moderators", "administrator", "administrators", "admin", "suspended", "eso", "name", "password", "everyone", "myself");
 
 // Initialize: define the form contents, and check to see if form data was submitted.
 function init()
 {
 	// If we're already logged in, go to 'My settings'.
 	if ($this->eso->user) redirect("settings");
-	
+
 	// Set the title.
 	global $language, $config;
 	$this->title = $language["Join this forum"];
 
-	if (isset($_GET["q2"])) {
+	// Only respond to requests for verification emails if we require e-mail verification.
+	if (($config["registrationRequireEmail"] == true) && isset($_GET["q2"])) {
 		
-		// If the user is requesting that we resend their verifcaiton email...
+		// If the user is requesting that we resend their verification email...
 		if ($_GET["q2"] == "sendVerification") {
 			$memberId = (int)@$_GET["q3"];
 			if (list($email, $name, $password) = $this->eso->db->fetchRow("SELECT email, name, password FROM {$config["tablePrefix"]}members WHERE memberId=$memberId AND account='Unvalidated'")) $this->sendVerificationEmail($email, $name, $memberId . $password);
@@ -35,9 +52,9 @@ function init()
 		// Otherwise, if there's a verification hash in the URL, attempt to verify the user.
 		else $this->validateMember($_GET["q2"]);
 		return;
-		
+
 	}
-		
+	
 	// Define the elements in the join form.
 	$this->form = array(
 		
@@ -46,7 +63,7 @@ function init()
 			100 => array(
 				"id" => "name",
 				"html" => @"<label>{$language["Username"]}</label> <input id='name' name='join[name]' type='text' class='text' autocomplete='username' value='{$_POST["join"]["name"]}' maxlength='16' tabindex='100'/>",
-				"validate" => array($this, "validateName"),
+				"validate" => "validateName",
 				"required" => true,
 				"databaseField" => "name",
 				"ajax" => true
@@ -94,8 +111,16 @@ function init()
 	
 	// If the form has been submitted, validate it and add the member into the database.
 	if (isset($_POST["join"]) and $this->addMember()) {
-		$this->eso->message("verifyEmail", false);
-		redirect("");
+		if ($config["registrationRequireEmail"] == true) {
+			$this->eso->message("verifyEmail", false);
+			redirect("");
+		} elseif ($config["registrationRequireApproval"] == true) {
+			$this->eso->message("waitForApproval", false);
+			redirect("");
+		} else {
+			$this->eso->login($_POST["join"]["name"], $_POST["join"]["password"], false);
+			redirect("");
+		}
 	}
 }
 
@@ -142,6 +167,9 @@ function addMember()
 	
 	// If there was a validation error, don't continue.
 	if ($validationError) return false;
+
+	// If registration has been disabled, there's no need to go any further.
+	if (($error = $this->canJoin()) !== true) return false;
 	
 	// Construct the query to insert the member into the database.
 	// Loop through the form fields and use their "databaseField" and "input" attributes for the query.
@@ -153,6 +181,17 @@ function addMember()
 			: "'{$field["input"]}'";
 	}
 	
+	// If we're not requiring verification, add a field to the query that "validates" the member without a validation hash.
+	if ($config["registrationRequireEmail"] == false and $config["registrationRequireApproval"] == false) {
+		$insertData["account"] = "'Member'";
+	}
+
+	// We also need to generate a hash and salt and add them to the query.
+	$salt = generateRandomString(32);
+	$hash = md5($salt . $_POST["join"]["password"]);
+	$insertData["password"] = "'$hash'";
+	$insertData["salt"] = "'$salt'";
+
 	// Add a few extra fields to the query.
 	$insertData["color"] = "FLOOR(1 + (RAND() * {$this->eso->skin->numberOfColors}))";
 	$insertData["language"] = "'" . $this->eso->db->escape($config["language"]) . "'";
@@ -172,19 +211,28 @@ function addMember()
 	$this->callHook("afterAddMember", array($memberId));
 	
 	// Email the member with a verification link so that they can verify their account.
-	$this->sendVerificationEmail($_POST["join"]["email"], $_POST["join"]["name"], $memberId . md5($config["salt"] . $_POST["join"]["password"]));
+	if ($config["registrationRequireEmail"] == true) {
+		$this->sendVerificationEmail($_POST["join"]["email"], $_POST["join"]["name"], $memberId . md5($salt . $_POST["join"]["password"]));
+	}
 	
 	return true;
 }
 
-// Send a verfication email.
+// To join, registration must be open.
+function canJoin() {
+	global $config;
+	if (empty($config["registrationOpen"])) return "registrationClosed";
+	return true;
+}
+
+// Send a verification email.
 function sendVerificationEmail($email, $name, $verifyHash)
 {
 	global $language, $config;
 	sendEmail($email, sprintf($language["emails"]["join"]["subject"], $name), sprintf($language["emails"]["join"]["body"], $name, $config["forumTitle"], $config["baseURL"] . makeLink("join", $verifyHash)));
 }
 
-// Validate a member with the provided a validation hash.
+// Validate a member with the provided validation hash.
 function validateMember($hash)
 {
 	global $config;
@@ -219,21 +267,6 @@ function validateConfirmPassword($password)
 {
 	if ($password != (defined("AJAX_REQUEST") ? $_POST["password"] : $_POST["join"]["password"]))
 		return "passwordsDontMatch";
-}
-
-// Validate the name field: make sure it's not reserved, is long enough, doesn't contain invalid characters, and is not already taken by another member.
-function validateName(&$name)
-{
-	global $config;
-	$name = substr($name, 0, 31);
-	if (in_array(strtolower($name), $this->reservedNames)) return "nameTaken";
-	if (!strlen($name)) return "nameEmpty";
-	if (empty($config["allowWeirdCharacters"])) {
-		if (preg_match("/[^[:print:]]/", $name)) return "invalidCharacters";
-	}
-	if (preg_match("/[" . preg_quote("!/%+-", "/") . "]/", $name)) return "invalidCharacters";
-	if (@$this->eso->db->result($this->eso->db->query("SELECT 1 FROM {$config["tablePrefix"]}members WHERE name='" . $this->eso->db->escape($name) . "' AND account!='Unvalidated'"), 0))
-		return "nameTaken";
 }
 	
 }

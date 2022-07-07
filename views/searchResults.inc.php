@@ -1,7 +1,27 @@
 <?php
-// searchResults.inc.php
-// Displays a table of search results using columns defined in the search controller.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * Search results: displays a table of search results using columns
+ * defined in the search controller.
+ */
 if(!defined("IN_ESO"))exit;
 ?>
 <table cellspacing='0' cellpadding='2' class='c'>
@@ -21,7 +41,7 @@ function columnStar(&$search,$conversation)
 // Returns the HTML for the contents of a cell in the avatar column.
 function columnAvatar(&$search,$conversation)
 {
-    return "<a href='".makeLink($conversation["id"],$conversation["slug"])."' style='margin:0' data-instant><img src='".$search->eso->getAvatar($conversation["startMemberId"],$conversation["avatarFormat"],"thumb")."' alt='' class='thumb'/></a>";
+    return "<a href='".makeLink(conversationLink($conversation["id"], $conversation["slug"]))."' style='margin:0' data-instant><img src='".$search->eso->getAvatar($conversation["startMemberId"],$conversation["avatarFormat"],"thumb")."' alt='' class='thumb'/></a>";
 }
 
 // Returns the HTML for the contents of a cell in the conversation column: labels, title, and tags.
@@ -40,17 +60,17 @@ function columnConversation(&$search,$conversation)
     // Output the conversation title.
     $html.="<strong";
     if($search->eso->user and !$conversation["unread"])$html.=" class='read'";
-    $html.="><a href='".makeLink($conversation["id"],$conversation["slug"])."' data-instant>".highlight($conversation["title"],$_SESSION["highlight"])."</a></strong><br/>";
+    $html.="><a href='".makeLink(conversationLink($conversation["id"], $conversation["slug"]))."' data-instant>".highlight($conversation["title"],$_SESSION["highlight"])."</a></strong><br/>";
     
     // If the conversation is unread, show a "jump to unread" link.
-    if ($search->eso->user["name"] and $conversation["unread"]) $html .= "<small id='jumplink'><a href='" . makeLink($conversation["id"], $conversation["slug"], "?start=unread") . "'>{$language["Jump to unread"]}</a></small>";
-
-    // Jump to last/unread link, depending on the user.
-    // if($search->eso->user["name"] and $conversation["unread"])$html.="<small><a href='".makeLink($conversation["id"],$conversation["slug"],"?start=unread")."'>{$language["Jump to unread"]}</a></small>";
-    // else $html.="<small><a href='".makeLink($conversation["id"],$conversation["slug"],"?start=last")."'>{$language["Jump to last"]}</a></small>";
+    // if ($search->eso->user["name"] and $conversation["unread"]) $html .= "<small id='jumplink'><a href='" . makeLink($conversation["id"], $conversation["slug"], "?start=unread") . "'>{$language["Jump to unread"]}</a></small>";
     
     // We can't forget tags.
     $html .= "<small class='tags'>{$conversation["tags"]}</small>";
+	
+    // Jump to last/unread link, depending on the user.
+    if ($search->eso->user["name"] and $conversation["unread"]) $html .= "<small id='unreadPost'><a href='" . makeLink(conversationLink($conversation["id"], $conversation["slug"]), "?start=unread") . "'>{$language["Jump to unread"]}</a></small>";
+    else $html .= "<small id='lastPost'><a href='" . makeLink(conversationLink($conversation["id"], $conversation["slug"]), "?start=last") . "'>{$language["Jump to last"]}</a></small>";
     
     $search->callHook("getConversationColumn", array(&$html, $conversation));
     
@@ -104,6 +124,6 @@ if (!$this->numberOfConversations): echo $this->eso->htmlMessage("noSearchResult
 // On the other hand, if there were too many results, show a "show more" message.
 elseif ($this->limit==$config["results"] + 1 and $this->numberOfConversations > $config["results"]): ?>
 <div id='more'>
-<?php echo $this->eso->htmlMessage("viewMore", array(makeLink("search", urlencode(@$_SESSION["search"] . (@$_SESSION["search"] ? " + " : "")."more results")))); ?>
+<?php echo $this->eso->htmlMessage("viewMore", array(makeLink("search", urlencode(@$_SESSION["search"] . (@$_SESSION["search"] ? " + " : "").$language["gambits"]["limit:"].$language["gambits"]["100"])))); ?>
 </div>
 <?php endif; ?>

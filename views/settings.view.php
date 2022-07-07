@@ -1,7 +1,27 @@
 <?php
-// settings.view.php
-// Displays an interface where the user can change their avatar, color, password/e-mail, and other settings.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * Settings view: displays an interface where the user can change their
+ * avatar, color, password/email, and other settings.
+ */
 if(!defined("IN_ESO"))exit;
 ?>
 <div id='settings'>
@@ -11,7 +31,9 @@ if(!defined("IN_ESO"))exit;
 
 <div class='p <?php echo $this->eso->user["avatarAlignment"]=="right"?"r ":"l ";?>c<?php echo $this->eso->user["color"];?>' id='preview'>
 <div class='parts'><div>
-<div class='hdr'><div class='pInfo'><h3><?php echo $this->eso->user["name"];?></h3></div></div>
+<div class='hdr'><div class='pInfo'>
+<div class='thumb'><a href='<?php echo makeLink("profile",$this->eso->user["memberId"]);?>'><img src='<?php echo $this->eso->getAvatar($this->eso->user["memberId"],$this->eso->user["avatarFormat"],"thumb");?>' alt=''/></a></div>
+<h3><?php echo $this->eso->user["name"];?></h3></div></div>
 <div class='body'>
 
 <?php // Color palette. ?>
@@ -21,7 +43,8 @@ if(!defined("IN_ESO"))exit;
 <?php endfor;?>
 </tr></table></div>
 
-<?php // Avatar selection form. ?>
+<?php // If it's okay to upload avatars, add an avatar selection form.
+if (!empty($config["changeAvatar"])): ?>
 <form action='<?php echo makeLink("settings");?>' id='settingsAvatar' method='post' enctype='multipart/form-data'>
 <input type='hidden' name='token' value='<?php echo $_SESSION["token"];?>'/>
 <ul class='form'>
@@ -34,6 +57,11 @@ if(!defined("IN_ESO"))exit;
 </label>
 <input id='upl-ava' name='avatarUpload' type='file' class='text' size='20' onchange='document.getElementById("upload").checked="true"'/>
 </li>
+
+<?php // Otherwise if avatar uploading is disabled, show a message.
+else: ?>
+<?php echo $this->eso->htmlMessage("avatarDisabled"); ?>
+<?php endif; ?>
 
 <?php // Get an avatar from URL.
 if(ini_get("allow_url_fopen")):?>
@@ -133,5 +161,33 @@ endforeach;
 </ul></fieldset>
 <?php if(!count($this->messages)):?><script type='text/javascript'>Settings.hideFieldset("settingsPassword")</script><?php endif;?>
 </form>
+
+<?php // If it's okay to change names, output the change my username form.
+if (!empty($config["changeUsername"])): ?>
+<form action='<?php echo makeLink("settings");?>' method='post'>
+<input type='hidden' name='token' value='<?php echo $_SESSION["token"];?>'/>
+<fieldset id='settingsUser'>
+<legend><a href='#' onclick='Settings.toggleFieldset("settingsUser");return false'><?php echo $language["Change my username"];?></a></legend>
+<ul class='form' id='settingsUserForm'>
+
+<li>
+<label><?php echo $language["New username"];?> <small><?php echo $language["optional"];?></small><small style='display:block'><?php echo $language["changeYourName"];?></small></label> <input type='text' name='settingsUsername[name]' class='text' autocomplete='username' value='<?php echo @$_POST["settingsUsername"]["name"];?>'/>
+<?php if(!empty($this->messages["username"]))echo $this->eso->htmlMessage($this->messages["username"]);?>
+</li>
+
+<li>
+<label><?php echo $language["My current password"];?></label> <input type='password' name='settingsUsername[password]' class='text' autocomplete='current-password'/>
+<?php if(!empty($this->messages["password"]))echo $this->eso->htmlMessage($this->messages["password"]);?>
+</li>
+
+<li><label id='lbl-pass'></label> <?php echo $this->eso->skin->button(array("value"=>$language["Save changes"],"name"=>"settingsUsername[submit]"));?></li>
+
+</ul></fieldset>
+
+<?php $this->callHook("settingsPageEnd");?>
+
+<?php if(!count($this->messages)):?><script type='text/javascript'>Settings.hideFieldset("settingsUser")</script><?php endif;?>
+</form>
+<?php endif;?>
 
 </div>

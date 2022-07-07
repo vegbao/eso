@@ -1,10 +1,29 @@
 <?php
-// functions.php
-// Contains functions used all over the application.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * Functions: contains functions which are used all over the application.
+ */
 if (!defined("IN_ESO")) exit;
 
-// Substitute sensitive characters with html entities and trim.
+// Substitute sensitive characters with a replacement character.
 function sanitize($value)
 {
 	if (!is_array($value)) {
@@ -28,6 +47,12 @@ function desanitize($value)
 	}
 }
 
+// Sanitize a string for outputting in a HTML context.
+function sanitizeHTML($value)
+{
+	return htmlentities($value, ENT_QUOTES, "UTF-8");
+}
+
 // Sanitize HTTP header-sensitive characters (CR and LF.)
 function sanitizeForHTTP($value)
 {
@@ -49,19 +74,47 @@ function escapeDoubleQuotes($value)
 // Create a conversation title slug from a given string. Any non-alphanumeric characters will be converted to "-".
 function slug($string)
 {
-	// Convert special latin letters and other characters to HTML entities.
- 	$slug = htmlentities(desanitize($string), ENT_QUOTES, "UTF-8");
+	// If there are any characters other than basic alphanumeric, space, punctuation, then we need to attempt transliteration.
+	if (preg_match("/[^\x20-\x7f]/", $string)) {
 
- 	// With those HTML entities, either convert them back to a normal letter, or remove them.
- 	$slug = preg_replace(array("/&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml);/i", "/&[^;]{2,6};/"), array("$1", " "), $slug);
+		// Thanks to krakos for this code!
+		if (function_exists('transliterator_transliterate')) {
 
- 	global $eso;
- 	if (!empty($eso)) $eso->callHook("GenerateSlug", array(&$slug));
+			// Unicode decomposition rules states that these cannot be decomposed, hence we have to deal with them manually.
+			// Note: even though "scharfe s" is commonly transliterated as "sz", in this context "ss" is preferred as it's the most popular method among German speakers.
+			$src = array('œ', 'æ', 'đ', 'ø', 'ł', 'ß', 'Œ', 'Æ', 'Đ', 'Ø', 'Ł');
+			$dst = array('oe','ae','d', 'o', 'l', 'ss', 'OE', 'AE', 'D', 'O', 'L');
+			$string = str_replace($src, $dst, $string);
 
- 	// Now replace non-alphanumeric characters with a hyphen, and remove multiple hyphens.
- 	$slug = strtolower(trim(preg_replace(array("/[^0-9a-z]/i", "/-+/"), "-", $slug), "-"));
+			// Using transliterator to get rid of accents and convert non-Latin to Latin.
+			$string = transliterator_transliterate("Any-Latin; NFD; [:Nonspacing Mark:] Remove; NFC; [:Punctuation:] Remove; Lower();", $string);
+		
+		}
+		else {
 
-	return substr($slug, 0, 63);
+			// A fallback to the old method.
+			// Convert special Latin letters and other characters to HTML entities.
+			$string = htmlentities($string, ENT_NOQUOTES, "UTF-8");
+
+			// With those HTML entities, either convert them back to a normal letter, or remove them.
+			$string = preg_replace(array("/&([a-z]{1,2})(acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml|caron);/i", "/&[^;]{2,6};/"), array("$1", " "), $string);
+
+		}
+	}
+
+	// Allow plugins to alter the slug.
+	global $eso;
+	if (!empty($eso)) $eso->callHook("GenerateSlug", array(&$string));
+
+	// Now replace non-alphanumeric characters with a hyphen, and remove multiple hyphens.
+	if (extension_loaded("mbstring")) {
+		$slug = str_replace(' ','-',trim(preg_replace('~[^\\pL\d]+~u',' ',mb_strtolower($string, "UTF-8"))));
+		return mb_substr($slug, 0, 63, "UTF-8");
+	} else {
+		$slug = strtolower(trim(preg_replace(array("/[^0-9a-z]/i", "/-+/"), "-", $string), "-"));
+		return substr($slug, 0, 63);
+	}
+
 }
 
 // Finds $words in $text and puts a span with class='highlight' around them.
@@ -94,9 +147,8 @@ function processRequestURI($requestURI)
 }
 
 // Generate a salt of $numOfChars characters long containing random letters, numbers, and symbols.
-function generateRandomString($numOfChars)
+function generateRandomString($numOfChars, $possibleChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~!@#%^&*()_+=-{}[]:;<,>.?/`")
 {
-	$possibleChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~!@#%^&*()_+=-{}[]:;<,>.?/`";
 	$salt = "";
 	for ($i = 0; $i < $numOfChars; $i++) $salt .= $possibleChars[rand(0, strlen($possibleChars) - 1)];
 	return $salt;
@@ -185,6 +237,16 @@ function makeLink()
 	return $link;
 }
 
+// Generate a URL to a conversation based on its ID and slug.
+// The exact output of the function depends on the value of $config["usePrettyURLs"].
+// ex. conversationLink($id, $slug) -> "/1", "/1-welcome-to-simon-s-test-forum"
+function conversationLink($conversationId, $conversationSlug)
+{
+	global $config;
+	$conversationLink = !empty($config["usePrettyURLs"]) ? $conversationId . "-" . $conversationSlug : $conversationId;
+	return $conversationLink;
+}
+
 // Generate a link to the current page. To get a form to submit to the same page: <form action='curLink()'.
 function curLink()
 {
@@ -224,12 +286,39 @@ function validateEmail(&$email)
 	elseif ($eso->db->numRows($eso->db->query("SELECT 1 FROM {$config["tablePrefix"]}members WHERE email='" . $eso->db->escape($email) . "' AND account!='Unvalidated'"))) return "emailTaken";
 }
 
+// Validate the name field: make sure it's not reserved, is long enough, doesn't contain invalid characters, and is not already taken by another member.
+function validateName(&$name)
+{
+	global $eso, $config;
+	$reservedNames = $config["reservedNames"];
+
+	// Make sure the name isn't a reserved word.
+	if (in_array(strtolower($name), $reservedNames)) return "nameTaken";
+
+	// Make sure the name is not too small or large.
+	$length = mb_strlen($name, "UTF-8");
+	if ($length < 3 or $length > 20) return "nameEmpty";
+
+	// It can't be empty either!
+	if (!strlen($name)) return "nameEmpty";
+	if (is_numeric($name) && (int)$name === 0) return "nameEmpty";
+
+	// If we're not allowing weird characters, match anything outside of the non-extended ASCII alphabet.
+	if (empty($config["nonAsciiCharacters"])) {
+		if (preg_match("/[^[:print:]]/", $name)) return "invalidCharacters";
+	}
+	
+	if (@$eso->db->result($eso->db->query("SELECT 1 FROM {$config["tablePrefix"]}members WHERE name='" . $eso->db->escape($name) . "' AND account!='Unvalidated'"), 0))
+		return "nameTaken";
+}
+
 // Validate a password field: make sure it's not too long, then encrypt it with a salt.
 function validatePassword(&$password)
 {
 	global $config;
 	if (strlen($password) < $config["minPasswordLength"]) return "passwordTooShort";
-	$password = md5($config["salt"] . $password);
+//	$hash = md5($salt . $password);
+//	return $hash;
 }
 
 // Work out the relative difference between the current time and a given timestamp.
@@ -471,7 +560,9 @@ function writeFile($file, $contents)
 // Regenerate the session token.
 function regenerateToken()
 {
-	$_SESSION["token"] = md5(uniqid(rand()));
+	session_regenerate_id(true);
+	$_SESSION["token"] = substr(md5(uniqid(rand())), 0, 13);
+	$_SESSION["userAgent"] = md5($_SERVER["HTTP_USER_AGENT"]);
 }
 
 // htmlspecialchars_decode for PHP 4.

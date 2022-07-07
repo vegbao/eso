@@ -1,8 +1,27 @@
 <?php
-// sitemap.php
-// Generates necessary sitemap files and outputs an xml file.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 define("IN_ESO", 1);
+
+/**
+ * Sitemap: generates necessary sitemap files and outputs sitemap.xml.
+ */
 
 // Include our config files.
 require "config.default.php";
@@ -26,9 +45,7 @@ if (!file_exists("sitemap.xml") or filemtime("sitemap.xml") < time() - $config["
 	set_time_limit(0);
 
 	// Connect to the database.
-	require "lib/database.php";
-	$db = new Database();
-	if (!$db->connect($config["mysqlHost"], $config["mysqlUser"], $config["mysqlPass"], $config["mysqlDB"])) exit;
+	$db = (@mysql_connect($config["mysqlHost"], $config["mysqlUser"], $config["mysqlPass"]) and @mysql_select_db($config["mysqlDB"]));
 	
 	// Does sitemap.general.xml exist?  If not, create it.
 	if (!file_exists("sitemap.general.xml")) {
@@ -59,7 +76,7 @@ if (!file_exists("sitemap.xml") or filemtime("sitemap.xml") < time() - $config["
 			// Create a <url> tag for each conversation in the result set.
 			while (list($conversationId, $slug, $postsPerDay, $lastUpdated, $posts) = mysql_fetch_row($r)) {
 				
-				$urlset .= "<url><loc>{$config["baseURL"]}" . makeLink($conversationId, $slug) . "</loc><lastmod>" . gmdate("Y-m-d\TH:i:s+00:00", $lastUpdated) . "</lastmod><changefreq>";
+				$urlset .= "<url><loc>{$config["baseURL"]}" . makeLink(conversationLink($conversationId, $slug)) . "</loc><lastmod>" . gmdate("Y-m-d\TH:i:s+00:00", $lastUpdated) . "</lastmod><changefreq>";
 				
 				// How often should we tell them to check for updates?
 				if ($postsPerDay < 0.006) $urlset .= "yearly";

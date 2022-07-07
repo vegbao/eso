@@ -1,9 +1,28 @@
 <?php
-// installer.controller.php
-// Performs all installation tasks: checks server environment, runs isntallation queries, creates configuration files, etc.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Install controller: performs all installation tasks - checks server
+ * environment, runs installation queries, creates configuration files...
+ */
 class Install extends Database {
 
 var $step;
@@ -112,12 +131,21 @@ function init()
 
 }
 
+// Obtain the hardcoded version of eso (ESO_VERSION).
+function getVersion()
+{
+	include "../config.default.php";
+	$version = ESO_VERSION;
+	return $version;
+}
+
 // Generate a default value for the baseURL based on server environment variables.
 function suggestBaseUrl()
 {
 	$dir = substr($_SERVER["PHP_SELF"], 0, strrpos($_SERVER["PHP_SELF"], "/"));
 	$dir = substr($dir, 0, strrpos($dir, "/"));
-	$baseURL = "http://{$_SERVER["HTTP_HOST"]}{$dir}/";
+	if (array_key_exists("HTTPS", $_SERVER) and $_SERVER["HTTPS"] === "on") $baseURL = "https://{$_SERVER["HTTP_HOST"]}{$dir}/";
+	else $baseURL = "http://{$_SERVER["HTTP_HOST"]}{$dir}/";
 	return $baseURL;
 }
 
@@ -158,7 +186,6 @@ function doInstall()
 		"forumDescription" => $_SESSION["install"]["forumDescription"],
 		"language" => $_SESSION["install"]["language"],
 		"baseURL" => $_SESSION["install"]["baseURL"],
-		"salt" => generateRandomString(rand(32, 64)),
 		"emailFrom" => "do_not_reply@{$_SERVER["HTTP_HOST"]}",
 		"cookieName" => preg_replace(array("/\s+/", "/[^\w]/"), array("_", ""), desanitize($_SESSION["install"]["forumTitle"])),
 		"useFriendlyURLs" => !empty($_SESSION["install"]["friendlyURLs"]),
@@ -171,7 +198,7 @@ function doInstall()
 	// Run the queries one by one and halt if there's an error!
 	include "queries.php";
 	foreach ($queries as $query) {
-		if (!$this->query($query)) return array(1 => "<code>" . sanitize($this->error()) . "</code><p><strong>The query that caused this error was</strong></p><pre>" . sanitize($query) . "</pre>");
+		if (!$this->query($query)) return array(1 => "<code>" . sanitizeHTML($this->error()) . "</code><p><strong>The query that caused this error was</strong></p><pre>" . sanitizeHTML($query) . "</pre>");
 	}
 	
 	// Write the $config variable to config.php.
@@ -181,11 +208,11 @@ function doInstall()
 	$enabledPlugins = array("Emoticons");
 	if ((extension_loaded("gd") or extension_loaded("gd2")) and function_exists("imagettftext"))
 		$enabledPlugins[] = "Captcha";
-	if (!file_exists("../config/plugins.php")) writeConfigFile("../config/plugins.php", '$config["loadedPlugins"]', $enabledPlugins);
+	if (!file_exists("../config/plugins.php")) writeConfigFile(PATH_CONFIG."/plugins.php", '$config["loadedPlugins"]', $enabledPlugins);
 	
 	// Write the skin.php file, which contains the enabled skin, and custom.php.
-	if (!file_exists("../config/skin.php")) writeConfigFile("../config/skin.php", '$config["skin"]', "Plastic");
-	if (!file_exists("../config/custom.php")) writeFile("../config/custom.php", '<?php
+	if (!file_exists("../config/skin.php")) writeConfigFile(PATH_CONFIG."/skin.php", '$config["skin"]', "Plastic");
+	if (!file_exists("../config/custom.php")) writeFile(PATH_CONFIG."/custom.php", '<?php
 if (!defined("IN_ESO")) exit;
 // Any language declarations, messages, or anything else custom to this forum goes in this file.
 // Examples:
@@ -193,8 +220,8 @@ if (!defined("IN_ESO")) exit;
 // $messages["incorrectLogin"]["message"] = "Oops! The login details you entered are incorrect. Did you make a typo?";
 ?>');
 	// Write custom.css and index.html as empty files (if they're not already there.)
-	if (!file_exists("../config/custom.css")) writeFile("../config/custom.css", "");
-	if (!file_exists("../config/index.html")) writeFile("../config/index.html", "");
+	if (!file_exists("../config/custom.css")) writeFile(PATH_CONFIG."/custom.css", "");
+	if (!file_exists("../config/index.html")) writeFile(PATH_CONFIG."/index.html", "");
 	
 	// Write the versions.php file with the current version.
 	include "../config.default.php";
@@ -202,7 +229,7 @@ if (!defined("IN_ESO")) exit;
 	
 	// Write a .htaccess file if they are using friendly URLs (and mod_rewrite).
 	if ($config["useModRewrite"]) {
-		writeFile("../.htaccess", "# Generated by eso (https://geteso.org)
+		writeFile(PATH_ROOT."/.htaccess", "# Generated by eso (https://geteso.org)
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -211,7 +238,7 @@ RewriteRule ^(.*)$ index.php/$1 [QSA,L]
 	}
 	
 	// Write a robots.txt file.
-	writeFile("../robots.txt", "User-agent: *
+	writeFile(PATH_ROOT."/robots.txt", "User-agent: *
 Disallow: /search/
 Disallow: /online/
 Disallow: /join/
@@ -301,7 +328,7 @@ function fatalChecks()
 	if (!version_compare(PHP_VERSION, "4.3.0", ">=")) $errors[] = "Your server must have <strong>PHP 4.3.0 or greater</strong> installed to run your forum.<br/><small>Please upgrade your PHP installation (preferably to version 5) or request that your host or administrator upgrade the server.</small>";
 	
 	// Check for the MySQL extension.
-	if (!extension_loaded("mysql")) $errors[] = "You must have <strong>MySQL 4 or greater</strong> installed and the <a href='http://php.net/manual/en/mysql.installation.php' target='_blank'>MySQL extension enabled in PHP</a>.<br/><small>Please install/upgrade both of these requirements or request that your host or administrator install them.</small>";
+	if (!extension_loaded("mysql")) $errors[] = "You must have <strong>MySQL 5.7 or greater</strong> installed and the <a href='http://php.net/manual/en/mysql.installation.php' target='_blank'>MySQL extension enabled in PHP</a>.<br/><small>Please install/upgrade both of these requirements or request that your host or administrator install them.</small>";
 	
 	// Check file permissions.
 	$fileErrors = array();
@@ -312,7 +339,7 @@ function fatalChecks()
 			$fileErrors[] = $file ? $file : substr($realPath, strrpos($realPath, "/") + 1) . "/";
 		}
 	}
-	if (count($fileErrors)) $errors[] = "The following files/folders are not writeable: <strong>" . implode("</strong>, <strong>", $fileErrors) . "</strong>.<br/><small>To resolve this, you must navigate to these files/folders in your FTP client and <strong>chmod</strong> them to <strong>777</strong>.</small>";
+	if (count($fileErrors)) $errors[] = "The following files/folders are not writeable: <strong>" . implode("</strong>, <strong>", $fileErrors) . "</strong>.<br/><small>To resolve this, you must navigate to these files/folders in your FTP client and <strong>chmod</strong> them to <strong>777</strong> or <strong>755</strong> (recommended).</small>";
 	
 	// Check for PCRE UTF-8 support.
 	if (!@preg_match("//u", "")) $errors[] = "<strong>PCRE UTF-8 support</strong> is not enabled.<br/><small>Please ensure that your PHP installation has PCRE UTF-8 support compiled into it.</small>";

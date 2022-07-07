@@ -1,7 +1,26 @@
 <?php
-// profile.view.php
-// Displays a member's profile.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * Profile view: displays a member's profile.
+ */
 if(!defined("IN_ESO"))exit;
 ?>
 <fieldset>
@@ -13,8 +32,12 @@ if(!defined("IN_ESO"))exit;
 <div>
 <div class='hdr'>
 <div class='pInfo'>
+<div class='thumb'><a href='<?php echo makeLink("profile",$this->member["memberId"]);?>'><img src='<?php echo $this->eso->getAvatar($this->member["memberId"],$this->member["avatarFormat"],"thumb");?>' alt=''/></a></div>
 <h3><?php echo $this->member["name"];?></h3>
-<span><?php echo $language[$this->member["account"]];?></span>
+<?php if(!empty($this->eso->canChangeGroup($this->member["memberId"], $this->member["account"]))):?><form action='<?php echo curLink();?>' method='post'><div style='display:inline'><select onchange='Conversation.changeMemberGroup(<?php echo $this->member["memberId"];?>,this.value)' name='group'>
+	<?php foreach($this->eso->canChangeGroup($this->member["memberId"], $this->member["account"]) as $group):?><option value='<?php echo $group;?>'<?php if($group==$this->member["account"])echo " selected='selected'";?>><?php echo $language[$group];?></option><?php endforeach;?></select></div> <noscript><div style='display:inline'><input name='saveGroup' type='submit' value='Save' class='save'/><input type='hidden' name='member' value='<?php echo $this->member["memberId"];?>'/></div></noscript></form>
+<?php else:?><span><?php echo $language[$this->member["account"]];?></span>
+<?php endif;?>
 </div>
 </div>
 <div class='body'>
@@ -59,7 +82,7 @@ foreach($this->sections as $section):?>
 <?php endforeach;?>
 
 </div>
-<div class='avatar'><img src='<?php echo $this->eso->getAvatar($this->member["memberId"],$this->member["avatarFormat"],"l");?>' alt=''/></div>
+<div class='avatar'><img src='<?php echo $this->eso->getAvatar($this->member["memberId"],$this->member["avatarFormat"],"l");?>' alt=''/><?php $this->callHook("profileInfo"); ?></div>
 <div class='clear'></div>
 </div>
 

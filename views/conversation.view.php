@@ -1,7 +1,27 @@
 <?php
-// conversation.view.php
-// Displays the conversation header, pagination, posts, and reply box.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
+/**
+ * Conversation view: displays conversation header, pagination, posts,
+ * and reply box.
+ */
 if(!defined("IN_ESO"))exit;?>
 <?php
 // If we're trying to start a new conversation but we can't, display an error message.
@@ -105,12 +125,12 @@ if($this->conversation["postCount"]>0){
 // Generate the buttons.
 $previousButton=$this->startFrom<=0
 	?"<a class='previous disabled'>{$language["Previous"]}</a>"
-	:"<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?start=".max(0,$this->startFrom-$config["postsPerPage"]))."' class='previous'>{$language["Previous"]}</a>";
-$firstButton="<a href='".makeLink($this->conversation["id"],$this->conversation["slug"])."' class='first'>{$language["First"]}</a>";
-$lastButton="<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?start=last")."' class='last'>{$language["Last"]}</a>";
+	:"<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?start=".max(0,$this->startFrom-$config["postsPerPage"]))."' class='previous'>{$language["Previous"]}</a>";
+$firstButton="<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]))."' class='first'>{$language["First"]}</a>";
+$lastButton="<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?start=last")."' class='last'>{$language["Last"]}</a>";
 $nextButton=$this->startFrom+min($config["postsPerPage"],$this->conversation["postCount"]-$this->startFrom)>=$this->conversation["postCount"]
 	?"<a class='next disabled'>{$language["Next"]}</a>"
-	:"<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?start=".min($this->conversation["postCount"],$this->startFrom+$config["postsPerPage"]))."' class='next'>{$language["Next"]}</a>";
+	:"<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?start=".min($this->conversation["postCount"],$this->startFrom+$config["postsPerPage"]))."' class='next'>{$language["Next"]}</a>";
 
 // Generate the viewing text: "11-30 of 41 posts".
 $viewing=sprintf($language["viewingPosts"],"<span class='pgFrom'>".($this->startFrom+1)."</span>","<span class='pgTo'>".($this->startFrom+min($config["postsPerPage"],$this->conversation["postCount"]-$this->startFrom))."</span>","<span class='pgCount'>{$this->conversation["postCount"]}</span>");
@@ -120,7 +140,7 @@ $paginationHtml="<ul id='pagination' class='pg'>
 <li class='left'>$previousButton $firstButton</li>
 <li class='middle'>
 <div style='width:$showingPercent%; margin-left:$leftPercent%; margin-right:$rightPercent%;' class='viewing' title='".strip_tags($viewing)."'><div>$viewing</div></div>
-<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?start=unread")."' style='width:$unreadWidth%; margin-left:$unreadLeft%;' class='unread'>{$language["unread"]}</a>
+<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?start=unread")."' style='width:$unreadWidth%; margin-left:$unreadLeft%;' class='unread'>{$language["unread"]}</a>
 </li>
 <li class='right'>$lastButton $nextButton</li>
 </ul>";
@@ -136,7 +156,7 @@ echo $paginationHtml;
 // <![CDATA[
 <?php
 // Make lots of link templates that can be used by JavaScript (functions below), and when rendering the posts in PHP (further below).
-$memberLink="<a href='".makeLink("profile","%d")."'>%s</a>";$editedBy="({$language["edited by"]} %s %s)";$deletedBy="({$language["deleted by"]})";$quoteLink="<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?quotePost=%s",$this->startFrom?"&start=$this->startFrom":"","#reply")."' onclick='Conversation.quotePost(%s);return false'>{$language["quote"]}</a>";$editLink="<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?editPost=%s",$this->startFrom?"&start=$this->startFrom":"","#p%s")."' onclick='Conversation.editPost(%s);return false'>{$language["edit"]}</a>";$deleteLink="<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?deletePost=%s",$this->startFrom?"&start=$this->startFrom":"","&token=%t")."' onclick='Conversation.deletePost(%s);return false'>{$language["delete"]}</a>";$restoreLink="<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?restorePost=%s",$this->startFrom?"&start=$this->startFrom":"","&token=%t")."' onclick='Conversation.restorePost(%s);return false'>{$language["restore"]}</a>";$showDeletedLink="<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?showDeletedPost=%s",$this->startFrom?"&start=$this->startFrom":"")."' onclick='Conversation.showDeletedPost(%s);return false'>{$language["show"]}</a>";$hideDeletedLink="<a href='".makeLink($this->conversation["id"],$this->conversation["slug"],"?start=$this->startFrom")."' onclick='Conversation.hideDeletedPost(%s);return false'>{$language["hide"]}</a>";$lastAction="(<abbr title='%s'>{$language["online"]}</abbr>)";$permalink=makeLink("post","%s");?>
+$memberLink="<a href='".makeLink("profile","%d")."'>%s</a>";$editedBy="({$language["edited by"]} %s %s)";$deletedBy="({$language["deleted by"]})";$quoteLink="<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?quotePost=%s",$this->startFrom?"&start=$this->startFrom":"","#reply")."' onclick='Conversation.quotePost(%s);return false'>{$language["quote"]}</a>";$editLink="<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?editPost=%s",$this->startFrom?"&start=$this->startFrom":"","#p%s")."' onclick='Conversation.editPost(%s);return false'>{$language["edit"]}</a>";$deleteLink="<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?deletePost=%s",$this->startFrom?"&start=$this->startFrom":"","&token=%t")."' onclick='Conversation.deletePost(%s);return false'>{$language["delete"]}</a>";$restoreLink="<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?restorePost=%s",$this->startFrom?"&start=$this->startFrom":"","&token=%t")."' onclick='Conversation.restorePost(%s);return false'>{$language["restore"]}</a>";$showDeletedLink="<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?showDeletedPost=%s",$this->startFrom?"&start=$this->startFrom":"")."' onclick='Conversation.showDeletedPost(%s);return false'>{$language["show"]}</a>";$hideDeletedLink="<a href='".makeLink(conversationLink($this->conversation["id"], $this->conversation["slug"]),"?start=$this->startFrom")."' onclick='Conversation.hideDeletedPost(%s);return false'>{$language["hide"]}</a>";$lastAction="(<abbr title='%s'>{$language["online"]}</abbr>)";$permalink=makeLink("post","%s");?>
 function makeMemberLink(memberId, member) {return "<?php echo $memberLink;?>".replace("%d", memberId).replace("%s", member);}
 function makeEditedBy(member, time) {return "<?php echo $editedBy;?>".replace("%s", member).replace("%s", time);}
 function makeDeletedBy(member) {return "<?php echo $deletedBy;?>".replace("%s", member);}
@@ -174,7 +194,7 @@ if(!empty($post["deleteMember"])):?>
 <span><?php printf($deletedBy,$post["deleteMember"]);?></span>
 </div>
 <div class='controls'>
-<?php if($post["canEdit"]):?><span><?php echo str_replace("%s",$post["id"],$this->showingDeletedPost==$post["id"]?$hideDeletedLink:$showDeletedLink);?></span> <span><?php echo str_replace(array("%s","%t"),array($post["id"],$_SESSION["token"]),$restoreLink);?></span><?php endif;?> 
+<?php if($post["canEdit"]):?><span><?php echo str_replace("%s",$post["id"],$this->showingDeletedPost==$post["id"]?$hideDeletedLink:$showDeletedLink);?></span> <span><?php echo str_replace(array("%s","%t"),array($post["id"],$_SESSION["token"]),$restoreLink);?></span><?php endif;?>
 </div>
 </div>
 <?php if($this->showingDeletedPost==$post["id"]):?><div class='body'><?php echo $post["body"];?></div><?php endif;?>
@@ -193,6 +213,7 @@ if(!isset($this->conversation["posts"][$k-1]["memberId"]) or $this->conversation
 <div<?php if(!$singlePost):?> id='p<?php echo $post["id"];?>'<?php endif;?>>
 <div class='hdr'>
 <div class='pInfo'>
+<?php if($side):?><div class='thumb'><?php echo str_replace(array("%d","%s"),array($post["memberId"],"<img src='".($post["thumb"]?$post["thumb"]:("skins/{$config["skin"]}/avatarThumb.svg"))."' alt=''/>"),$memberLink);?></div><?php endif;?>
 <h3><?php echo str_replace(array("%d","%s"),array($post["memberId"],$post["name"]),$memberLink);?></h3>
 <span title='<?php echo $post["date"];?>'><a href='<?php echo str_replace("%s",$post["id"],$permalink);?>'><?php echo relativeTime($post["time"]);?></a></span>
 <?php if($post["editTime"]):?><span id='editedBy'><?php printf($editedBy,$post["editMember"],relativeTime($post["editTime"]));?></span>
@@ -206,6 +227,7 @@ if(!isset($this->conversation["posts"][$k-1]["memberId"]) or $this->conversation
 </div>
 <div class='body<?php if($this->editingPost==$post["id"]):?> edit<?php endif;?>'>
 <?php echo $this->editingPost==$post["id"]?$this->getEditArea($post["id"],$this->formatForEditing($post["body"])):$this->displayPost($post["body"]);?> 
+<?php $this->callHook("postFooter", array($post)); ?>
 </div>
 </div>
 <?php
@@ -213,7 +235,7 @@ if(!isset($this->conversation["posts"][$k-1]["memberId"]) or $this->conversation
 // If the post after this one is by a different member to this one, end the post 'group'.
 if(!isset($this->conversation["posts"][$k+1]["memberId"]) or $this->conversation["posts"][$k+1]["memberId"]!=$post["memberId"] or !empty($this->conversation["posts"][$k+1]["deleteMember"])):?>
 </div>
-<?php if($side):?><div class='avatar'><?php echo str_replace(array("%d","%s"),array($post["memberId"],"<img src='".($post["avatar"]?$post["avatar"]:("skins/{$config["skin"]}/avatarDefault.svg"))."' alt=''/>"),$memberLink);?></div><?php endif;?>
+<?php if($side):?><div class='avatar'><?php echo str_replace(array("%d","%s"),array($post["memberId"],"<img src='".($post["avatar"]?$post["avatar"]:("skins/{$config["skin"]}/avatar" . ($side == "l" ? "Left" : "Right") . ".svg"))."' alt=''/>"),$memberLink);?></div><?php endif;?>
 <div class='clear'></div>
 </div>
 

@@ -1,9 +1,28 @@
 <?php
-// admin.controller.php
-// Controls the toggling of plugins and plugin installation.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Admin controller: handles the sections shown to admins, including the
+ * admin dashboard and a way to change forum settings.
+ */
 class admin extends Controller {
 	
 var $view = "admin/admin.view.php";
@@ -12,15 +31,26 @@ var $sections = array();
 
 function init()
 {
-	// Non-admins aren't allowed here.
-	if (!$this->eso->user["admin"]) redirect("");
+	global $language;
+	
+	// Non-admins/mods aren't allowed here.
+	if (!$this->eso->user["moderator"]) redirect("");
 
-	// Add the default sections to the menu.
- 	$this->defaultSections = array("dashboard", "settings", "plugins", "skins");
- 	$this->addSection("dashboard", "Dashboard", array($this, "dashboardInit"), array($this, "dashboardAjax"));
- 	$this->addSection("settings", "Forum settings", array($this, "settingsInit"));
- 	$this->addSection("plugins", "Plugins", array($this, "pluginsInit"));
- 	$this->addSection("skins", "Skins", array($this, "skinsInit"));
+	// Add the default sections to the menu if the user is an administrator.
+	if ($this->eso->user["admin"]) {
+		$this->defaultSections = array("dashboard", "settings", "languages", "members", "plugins", "skins");
+		$this->addSection("dashboard", $language["Dashboard"], array($this, "dashboardInit"), array($this, "dashboardAjax"));
+		$this->addSection("settings", $language["Forum settings"], array($this, "settingsInit"));
+		$this->addSection("languages", $language["Languages"], array($this, "languagesInit"));
+		$this->addSection("members", $language["Member-plural"], array($this, "membersInit"));
+		$this->addSection("plugins", $language["Plugins"], array($this, "pluginsInit"));
+		$this->addSection("skins", $language["Skins"], array($this, "skinsInit"));
+	// If the user is a moderator, add a limited array of sections to the menu.
+	} elseif ($this->eso->user["moderator"]) {
+		$this->defaultSections = array("dashboard", "members");
+		$this->addSection("dashboard", $language["Dashboard"], array($this, "dashboardInit"), array($this, "dashboardAjax"));
+		$this->addSection("members", $language["Member-plural"], array($this, "membersInit"));
+	}
 	
 	$this->callHook("init");
 	
@@ -41,14 +71,14 @@ function ajax()
 
 function dashboardInit(&$adminController)
 {
-	global $config;
- 	$this->title = translate("Dashboard");
+	global $config, $language;
+	$this->title = $language["Dashboard"];
 	$this->subView = "admin/dashboard.php";
 	
 	// Get forum statistics to be outputted in the view.
 	$this->stats = array(
-		"Members" => $this->eso->db->result("SELECT COUNT(*) FROM {$config["tablePrefix"]}members", 0),
- 		"Conversations" => $this->eso->db->result("SELECT COUNT(*) FROM {$config["tablePrefix"]}conversations", 0),
+		"Member-plural" => $this->eso->db->result("SELECT COUNT(*) FROM {$config["tablePrefix"]}members", 0),
+ 		"Conversation-plural" => $this->eso->db->result("SELECT COUNT(*) FROM {$config["tablePrefix"]}conversations", 0),
  		"Posts" => $this->eso->db->result("SELECT COUNT(*) FROM {$config["tablePrefix"]}posts", 0),
  		// "New members in the past week" => $this->eso->db->result("SELECT COUNT(*) FROM {$config["tablePrefix"]}members WHERE UNIX_TIMESTAMP()-60*60*24*7<joinTime", 0),
  		"New conversations in the past week" => $this->eso->db->result("SELECT COUNT(*) FROM {$config["tablePrefix"]}conversations WHERE UNIX_TIMESTAMP()-60*60*24*7<startTime", 0),
@@ -66,20 +96,21 @@ function dashboardInit(&$adminController)
 
 function dashboardAjax(&$adminController)
 {
+	global $config;
+	
  	switch (@$_POST["action"]) {
  		case "checkForUpdates":
- 			if ($latestVersion = $this->eso->checkForUpdates())
- 				return $this->eso->htmlMessage("updatesAvailable", $latestVersion);
+ 			if ($latestVersion = $this->eso->checkForUpdates()
+				and ($this->user["memberId"] == $config["rootAdmin"]))
+ 					return $this->eso->htmlMessage("updatesAvailable", $latestVersion);
  	}
 }
 
 function settingsInit(&$adminController)
 {
 	global $language, $config;
-	//$this->title = $language["Dashboard"];
 	$this->subView = "admin/settings.php";
-	
-		$this->languages = $this->eso->getLanguages();
+	$this->languages = $this->eso->getLanguages();
 
 	// Change the forum logo?
 	if (isset($_POST["changeLogo"])
@@ -98,6 +129,15 @@ function settingsInit(&$adminController)
 			$this->eso->message("changesSaved");
 			refresh();
 		}
+
+	// Save the advanced settings?
+	if (isset($_POST["saveAdvancedSettings"])
+		and $this->eso->user["memberId"] == $config["rootAdmin"]
+	 	and $this->eso->validateToken(@$_POST["token"])
+		and $this->saveAdvancedSettings()) {
+			$this->eso->message("changesSaved");
+			refresh();
+		}
 	
 }
 
@@ -113,12 +153,66 @@ function saveSettings()
 	if (empty($_POST["forumDescription"]) or !strlen($_POST["forumDescription"])) {$this->eso->message("forumDescriptionError"); return false;}
 	$newConfig["forumDescription"] = $_POST["forumDescription"];
 	
-	if (in_array(@$_POST["forumLanguage"], $this->languages)) $newConfig["language"] = $_POST["forumLanguage"];
-	
 	$newConfig["useFriendlyURLs"] = (bool)!empty($_POST["useFriendlyURLs"]);
 
 	$newConfig["showForumDescription"] = (bool)!empty($_POST["showForumDescription"]);
+
+	$newConfig["useForumDescription"] = (bool)!empty($_POST["useForumDescription"]);
 	
+	if (count($newConfig)) $this->writeSettingsConfig($newConfig);
+
+	return true;
+}
+
+function saveAdvancedSettings()
+{
+	$newConfig = array();
+
+	$newConfig["gzipOutput"] = (bool)!empty($_POST["gzipOutput"]);
+
+	$newConfig["https"] = (bool)!empty($_POST["https"]);
+
+	$newConfig["uploadPackages"] = (bool)!empty($_POST["uploadPackages"]);
+
+	$newConfig["changeUsername"] = (bool)!empty($_POST["changeUsername"]);
+
+	// Logins per minute must be greater than or equal to 1.
+	if (empty($_POST["loginsPerMinute"]) or !is_numeric($_POST["loginsPerMinute"]) or ($_POST["loginsPerMinute"] < 1)) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["loginsPerMinute"] = $_POST["loginsPerMinute"];
+
+	// Minimum password length must be greater than or equal to 1.
+	if (empty($_POST["minPasswordLength"]) or !is_numeric($_POST["minPasswordLength"]) or ($_POST["minPasswordLength"] < 1)) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["minPasswordLength"] = $_POST["minPasswordLength"];
+
+	$newConfig["nonAsciiCharacters"] = (bool)!empty($_POST["nonAsciiCharacters"]);
+
+	if (empty($_POST["userOnlineExpire"]) or !is_numeric($_POST["userOnlineExpire"]) or ($_POST["userOnlineExpire"] < 1)) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["userOnlineExpire"] = $_POST["userOnlineExpire"];
+
+	if (empty($_POST["messageDisplayTime"]) or !is_numeric($_POST["messageDisplayTime"]) or ($_POST["messageDisplayTime"] < 1)) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["messageDisplayTime"] = $_POST["messageDisplayTime"];
+
+	if (empty($_POST["results"]) or !is_numeric($_POST["results"])) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["results"] = $_POST["results"];
+
+	if (!is_numeric($_POST["moreResults"])) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["moreResults"] = $_POST["moreResults"];
+
+	if (!is_numeric($_POST["numberOfTagsInTagCloud"])) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["numberOfTagsInTagCloud"] = $_POST["numberOfTagsInTagCloud"];
+
+	$newConfig["showAvatarThumbnails"] = (bool)!empty($_POST["showAvatarThumbnails"]);
+
+	if (!is_numeric($_POST["updateCurrentResultsInterval"])) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["updateCurrentResultsInterval"] = $_POST["updateCurrentResultsInterval"];
+
+	if (!is_numeric($_POST["checkForNewResultsInterval"])) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["checkForNewResultsInterval"] = $_POST["checkForNewResultsInterval"];
+
+	// Amount of searches limited to per minute must be greater than or equal to 1.
+	if (empty($_POST["searchesPerMinute"]) or !is_numeric($_POST["searchesPerMinute"]) or ($_POST["searchesPerMinute"] < 1)) {$this->eso->message("invalidConfig"); return false;}
+	$newConfig["searchesPerMinute"] = $_POST["searchesPerMinute"];
+
 	if (count($newConfig)) $this->writeSettingsConfig($newConfig);
 
 	return true;
@@ -553,6 +647,95 @@ function addSection($id, $title, $initFunction, $ajaxFunction = false, $position
 	addToArrayString($this->sections, $id, array("title" => $title, "initFunction" => $initFunction, "ajaxFunction" => $ajaxFunction), $position);
 }
 
+function languagesInit()
+{	
+	global $language, $config;
+	$this->title = $language["Languages"];
+	$this->subView = "admin/languages.php";
+	$this->languages = $this->eso->getLanguages();
+	
+	// If the "add a new language pack" form has been submitted, attempt to install the uploaded pack.
+	if (isset($_FILES["installLanguage"]) and $this->eso->validateToken(@$_POST["token"]) and !empty($config["uploadPackages"])) $this->installLanguage();
+
+	// Save the language settings.
+	if (isset($_POST["forumLanguage"])
+		and $this->eso->validateToken(@$_POST["token"])
+		and $this->changeLanguage(@$_POST["forumLanguage"])) {
+			$this->eso->message("changesSaved");
+			refresh();
+		}
+
+}
+
+function changeLanguage($language)
+{
+	$newConfig = array();
+
+	if (in_array($language, $this->languages)) $newConfig["language"] = $language;
+	else return false;
+
+    if (count($newConfig)) $this->writeSettingsConfig($newConfig);
+
+	return true;
+}
+
+// Install an uploaded language pack.
+function installLanguage()
+{
+	// If the uploaded file has any errors, don't proceed.
+	if ($_FILES["installLanguage"]["error"]) {
+		$this->eso->message("invalidLanguagePack");
+		return false;
+	}
+	
+	// Move the uploaded language pack into the languages directory.
+	if (!move_uploaded_file($_FILES["installLanguage"]["tmp_name"], "languages/{$_FILES["installLanguage"]["name"]}")) {
+		$this->eso->message("notWritable", false, "languages/");
+		return false;
+	}
+			
+	// Everything worked correctly - success!
+	// todo
+	$this->eso->message("languagePackAdded");
+}
+
+function membersInit(&$adminController)
+{
+	global $language, $config;
+	$this->subView = "admin/members.php";
+	$this->registrationSettings = array("email", "approval", "false");
+
+	// Save the settings?
+	if (isset($_POST["saveMembersSettings"])
+		and $this->eso->user["admin"]
+	 	and $this->eso->validateToken(@$_POST["token"])
+		and $this->saveMembersSettings()) {
+			$this->eso->message("changesSaved");
+			refresh();
+		}
+	
+	// Fetch a list of unvalidated mmbers.
+	$this->unvalidated = $this->eso->db->query("SELECT memberId, name, avatarFormat, IF(color>{$this->eso->skin->numberOfColors},{$this->eso->skin->numberOfColors},color), account, lastSeen, lastAction FROM {$config["tablePrefix"]}members WHERE account='Unvalidated' ORDER BY memberId DESC");
+	$this->numberUnvalidated = $this->eso->db->numRows($this->unvalidated);
+}
+
+function saveMembersSettings()
+{
+	$newConfig = array();
+	
+//	if (in_array(@$_POST["requireVerification"], $this->registrationSettings)) $newConfig["registrationRequireVerification"] = $_POST["requireVerification"];
+	
+	$newConfig["registrationOpen"] = (bool)!empty($_POST["registrationOpen"]);
+
+	$newConfig["registrationRequireEmail"] = (bool)!empty($_POST["registrationRequireEmail"]);
+
+	$newConfig["registrationRequireApproval"] = (bool)!empty($_POST["registrationRequireApproval"]);
+	
+	if (count($newConfig)) $this->writeSettingsConfig($newConfig);
+
+	return true;
+}
+
 // Get all the plugins into an array and perform any plugin-related actions.
 function pluginsInit(&$adminController)
 {
@@ -562,7 +745,7 @@ function pluginsInit(&$adminController)
 	$this->subView = "admin/plugins.php";
 	
 	// If the 'add a new plugin' form has been submitted, attempt to install the uploaded plugin.
-	if (isset($_FILES["installPlugin"]) and $this->eso->validateToken(@$_POST["token"])) $this->installPlugin();
+	if (isset($_FILES["installPlugin"]) and $this->eso->validateToken(@$_POST["token"]) and !empty($config["uploadPackages"])) $this->installPlugin();
 	
 	// Get the installed plugins and their details by reading the plugins/ directory.
 	if ($handle = opendir("plugins")) {
@@ -608,7 +791,7 @@ function pluginsInit(&$adminController)
 	
 	// Toggle a plugin if necessary.
 	if (!empty($_GET["toggle"]) and $this->eso->validateToken(@$_GET["token"]) and $this->togglePlugin($_GET["toggle"]))
- 		redirect("admin", "plugins");	
+ 		redirect("admin", "plugins");
 }
 
 
@@ -725,7 +908,7 @@ function skinsInit()
 	
 	
 	// If the 'add a new skin' form has been submitted, attempt to install the uploaded skin.
-	if (isset($_FILES["installSkin"]) and $this->eso->validateToken(@$_POST["token"])) $this->installSkin();
+	if (isset($_FILES["installSkin"]) and $this->eso->validateToken(@$_POST["token"]) and !empty($config["uploadPackages"])) $this->installSkin();
 	
 	// Get the installed skins and their details by reading the skins/ directory.
 	if ($handle = opendir("skins")) {

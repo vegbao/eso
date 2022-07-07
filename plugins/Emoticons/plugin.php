@@ -1,38 +1,96 @@
 <?php
-// Emoticons/plugin.php
-// Converts emoticon text entities into graphic emoticons.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Emoticons plugin: converts emoticon text entities into graphic
+ * emoticons.
+ */
 class Emoticons extends Plugin {
 
 var $id = "Emoticons";
 var $name = "Emoticons";
-var $version = "1.0";
+var $version = "1.1";
 var $description = "Converts emoticon text entities into graphic emoticons";
-var $author = "eso";
+var $author = "the esoBB team";
 
 var $emoticonDir = "plugins/Emoticons/";
 var $emoticons = array();
 
 function init()
 {
+    global $config, $language;
+
 	parent::init();
 	
 	// Add the emoticon CSS style to the head.
 	$this->eso->addToHead("<style type='text/css'>.emoticon {width:16px; height:16px; background:url({$this->emoticonDir}emoticons.svg); background-repeat:no-repeat}</style>");
 	
-	// Add the emoticon formatter that will parse and unparse emoticons.
-	$this->eso->formatter->addFormatter("emoticons", "Formatter_Emoticons");
-	
 	// Add a hook to convert emoticons to text in the feed.
 	if ($this->eso->action == "feed")
 		$this->eso->controller->addHook("formatPost", array($this, "revertEmoticons"));
+
+	// Language definitions.
+	$this->eso->addLanguage("Disable emoticons", "Disable image emoticons");
+
+	// If we're on the settings view, add the emoticon setting!
+	if ($this->eso->action == "settings") {
+		$this->eso->controller->addHook("init", array($this, "addEmoticonSettings"));
+	}
+	
+	$this->eso->addHook("init", array($this, "addEmoticonFormatter"));
+}
+
+// Add the emoticon formatter that will parse and unparse emoticons.
+// Only add the formatter if the current user hasn't opted out of graphical emoticons.
+function addEmoticonFormatter()
+{
+	if (empty($this->eso->user["emoticons"])) $this->eso->formatter->addFormatter("emoticons", "Formatter_Emoticons");
 }
 
 function revertEmoticons($controller, &$post)
 {
 	$post = $this->eso->formatter->modes["emoticons"]->revert($post);
+}
+
+// This is the part where we add the setting to the settings screen. Fun!
+function addEmoticonSettings(&$settings)
+{
+	global $language;
+
+	$settings->addToForm("settingsOther", array(
+		"id" => "emoticons",
+		"html" => "<label for='emoticons' class='checkbox'>{$language["Disable emoticons"]}</label> <input id='emoticons' type='checkbox' class='checkbox' name='emoticons' value='1' " .  (!empty($this->eso->user["emoticons"]) ? "checked='checked' " : "") . "/>",
+		"databaseField" => "emoticons",
+		"checkbox" => true
+	));
+}
+
+// Add the table to the database.
+function upgrade($oldVersion)
+{
+	global $config;
+	
+	if (!$this->eso->db->numRows("SHOW COLUMNS FROM {$config["tablePrefix"]}members LIKE 'emoticons'")) {
+		$this->eso->db->query("ALTER TABLE {$config["tablePrefix"]}members ADD COLUMN emoticons tinyint(1) NOT NULL default '0'");
+	}
 }
 
 }
@@ -133,7 +191,7 @@ function format()
 {
 	// Make an array of regular-expression-safe emoticon patterns.
 	$patterns = array();
-	foreach ($this->emoticons as $k => $v) $patterns[] = preg_quote(sanitize($k), "/");
+	foreach ($this->emoticons as $k => $v) $patterns[] = preg_quote(sanitizeHTML($k), "/");
 	
 	// Map a function to handle emoticons.
 	$this->formatter->lexer->mapFunction("emoticon", array($this, "emoticon"));

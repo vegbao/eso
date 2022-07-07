@@ -1,5 +1,27 @@
-// eso.js
-// Contains scripts for global functions, animations, messages, conversations, searching, joining the forum, and the settings page.
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/**
+ * eso's JavaScript: contains global functions, Animation class, Messages
+ * system, Ajax system, Conversation JavaScript, Search JavaScript, 'Join
+ * this forum' JavaScript, and 'My settings' JavaScript.
+ */
 
 // document.getElementById shortcut.
 function getById(id) {
@@ -743,7 +765,7 @@ initPagination: function() {
 	// Loop through the bars and create an easy-to-access array of their child elements
 	paginations = [getById("pagination"), getById("paginationBottom")];
 	for (var i in paginations) {
-		pg = {
+		var pg = {
 			"bar": paginations[i],
 			"viewingPosts": getElementsByClassName(paginations[i], "viewing")[0],
 			"middle": getElementsByClassName(paginations[i], "middle")[0],
@@ -1014,8 +1036,9 @@ displayPosts: function(scrollTo) {
 		// Regardless of post 'groups', output this individual post.
 		html.push("<div", (!singlePost ? " id='p" + post.id + "'" : ""), ">",
 			"<div class='hdr'>",
-			"<div class='pInfo'>",
-			"<h3>", makeMemberLink(post.memberId, post.name), "</h3> ",
+			"<div class='pInfo'>");
+		if (side) html.push("<div class='thumb'>", makeMemberLink(post.memberId, "<img src='" + (post.thumb || ("skins/" + eso.skin + "/avatarThumb.svg")) + "' alt=''/>"), "</div>");
+		html.push("<h3>", makeMemberLink(post.memberId, post.name), "</h3> ",
 			"<span title='", post.date, "'><a href='", makePermalink(post.id), "'>", relativeTime(post.time), "</a></span> ");
 		if (post.editTime) html.push("<span>", makeEditedBy(post.editMember, relativeTime(post.editTime)), "</span> ");
 		// Output the member's account.
@@ -1040,7 +1063,7 @@ displayPosts: function(scrollTo) {
 
 		// If the post after this one is by a different member to this one, end the post 'group'.
 		if (k == max - 1 || typeof Conversation.posts[k + 1] == "undefined" || Conversation.posts[k + 1]["name"] != post.name || Conversation.posts[k + 1]["deleteMember"]) {
-			html.push("</div>"); if (side) html.push("<div class='avatar'>", makeMemberLink(post.memberId, "<img src='" + (post.avatar || ("skins/" + eso.skin + "/avatarDefault.svg")) + "' alt=''/>"), "</div>");
+			html.push("</div>"); if (side) html.push("<div class='avatar'>", makeMemberLink(post.memberId, "<img src='" + (post.avatar || ("skins/" + eso.skin + "/avatar" + (side == "l" ? "Left" : "Right") + ".svg")) + "' alt=''/>"), "</div>");
 			html.push("<div class='clear'></div></div>");
 			
 			// Switch sides now that we're at the end of the group - only if the next post is not deleted!
@@ -1198,7 +1221,7 @@ animatePagination: function() {
 moveHandle: function(marginLeft) {
 	marginLeft = Math.max(0, Math.min(100 - parseFloat(this.paginations[0].viewingPosts.style.width), marginLeft));
 	var marginRight = 100 - marginLeft - parseFloat(this.paginations[0].viewingPosts.style.width);
-	for (i in Conversation.paginations) {
+	for (var i in Conversation.paginations) {
 		Conversation.paginations[i].viewingPosts.style.marginLeft = marginLeft + "%";
 		Conversation.paginations[i].viewingPosts.style.marginRight = marginRight + "%";
 	}
@@ -1207,13 +1230,13 @@ moveHandle: function(marginLeft) {
 // Resize the handle - change the handle's width.
 resizeHandle: function(width) {
 	width = Math.max(0, Math.min(100, width));
-	for (i in Conversation.paginations) Conversation.paginations[i].viewingPosts.style.width = width + "%";
+	for (var i in Conversation.paginations) Conversation.paginations[i].viewingPosts.style.width = width + "%";
 },
 
 // Resize the unread area.
 resizeUnread: function(width) {
 	width = Math.max(0, Math.min(100, width));
-	for (i in Conversation.paginations) {
+	for (var i in Conversation.paginations) {
 		Conversation.paginations[i].unread.style.marginLeft = (100 - width) + "%";
 		Conversation.paginations[i].unread.style.width = width + "%";
 	}
@@ -1575,7 +1598,7 @@ hideDeletedPost: function(postId) {
 	for (var i in Conversation.posts) {
 		if (Conversation.posts[i].id == postId) {
 			Conversation.posts[i].body = "";
-			oldHeight = getById("p" + postId).offsetHeight;
+			var oldHeight = getById("p" + postId).offsetHeight;
 			Conversation.displayPosts();
 			Conversation.animateDeletePost(getById("p" + postId), oldHeight);
 			break;
@@ -2107,7 +2130,7 @@ updateCurrentResults: function() {
 
 // View more search results - just search with the "more results" gambit.
 viewMore: function() {
-	Search.search(getById("searchText").value + (getById("searchText").value ? " + " : "") + eso.language["more results"]);
+	Search.gambit(eso.language["limit:"] + eso.language["100"]);
 },
 
 // Show new activity - an alias for reperforming the current search.
@@ -2265,35 +2288,3 @@ hideFieldset: function(id) {
 }
 
 };
-
-
-
-// Service worker JavaScript.
-// Tells a client what should be cached in case the site goes offline.
-self.addEventListener('install', function(event) {
-    var offlinePage = new Request('offline.html');
-    event.waitUntil(
-        fetch(offlinePage).then(function(response) {
-            return caches.open('offline').then(function(cache) {
-                return cache.put(offlinePage, response);
-            });
-        }));
-});
-  
-// If the fetch fails, it'll show the offline page.
-self.addEventListener('fetch', function(event) {
-    event.respondWith(
-        fetch(event.request).catch(function(error) {
-            return caches.open('offline').then(function(cache) {
-                return cache.match('offline.html');
-            });
-        }
-    ));
-});
-  
-// Adding an event that can be fired, which updates the offline page.
-self.addEventListener('refreshOffline', function(response) {
-    return caches.open('offline').then(function(cache) {
-        return cache.put(offlinePage, response);
-    });
-});

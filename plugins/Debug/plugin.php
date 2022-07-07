@@ -1,16 +1,34 @@
 <?php
-// Debug/plugin.php
-// Shows programming debug information for administrators.
-
+/**
+ * This file is part of the eso project, a derivative of esoTalk.
+ * It has been modified by several contributors.  (contact@geteso.org)
+ * Copyright (C) 2022 geteso.org.  <https://geteso.org>
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 if (!defined("IN_ESO")) exit;
 
+/**
+ * Debug plugin: shows programming debug information for administrators.
+ */
 class Debug extends Plugin {
 
 var $id = "Debug";
 var $name = "Debug";
 var $version = "1.0";
 var $description = "Shows programming debug information for administrators";
-var $author = "eso";
+var $author = "the esoBB team";
 var $defaultConfig = array(
 	"showToNonAdmins" => false
 );
@@ -164,7 +182,7 @@ function renderDebug($eso)
 	echo "<h3><a href='#' onclick='toggle(document.getElementById(\"debugQueries\"), {animation:\"verticalSlide\"});return false'>{$language["MySQL queries"]} (<span id='debugQueriesCount'>" . count($_SESSION["queries"]) . "</span>)</a></h3>
 	<ul id='debugQueries' class='fixed'>";
 	if (!count($_SESSION["queries"])) echo "<li></li>";
-	else foreach ($_SESSION["queries"] as $query) echo "<li>" . sanitize($query[0]) . " <small>(" . $query[1] . " {$language["seconds"]})</small></li>";
+	else foreach ($_SESSION["queries"] as $query) echo "<li>" . sanitizeHTML($query[0]) . " <small>(" . $query[1] . " {$language["seconds"]})</small></li>";
 	$_SESSION["queries"] = array();
 	
 	// POST + GET + FILES information.
@@ -172,20 +190,20 @@ function renderDebug($eso)
 	<h3><a href='#' onclick='toggle(document.getElementById(\"debugPostGetFiles\"), {animation:\"verticalSlide\"});return false'>{$language["POST + GET + FILES information"]}</a></h3>
 	<div id='debugPostGetFiles'>
 	<p style='white-space:pre' class='fixed' id='debugPost'>\$_POST = ";
-	echo sanitize(print_r($_POST, true));
+	echo sanitizeHTML(print_r($_POST, true));
 	echo "</p><p style='white-space:pre' class='fixed' id='debugGet'>\$_GET = ";
-	echo sanitize(print_r($_GET, true));
+	echo sanitizeHTML(print_r($_GET, true));
 	echo "</p><p style='white-space:pre' class='fixed' id='debugFiles'>\$_FILES = ";
-	echo sanitize(print_r($_FILES, true));
+	echo sanitizeHTML(print_r($_FILES, true));
 	echo "</p>
 	</div>";
 	
 	// SESSION + COOKIE information.
 	echo "<h3><a href='#' onclick='toggle(document.getElementById(\"debugSessionCookie\"), {animation:\"verticalSlide\"});return false'>{$language["SESSION + COOKIE information"]}</a></h3>
 	<div id='debugSessionCookie'><p style='white-space:pre' class='fixed' id='debugSession'>\$_SESSION = ";
-	echo sanitize(print_r($_SESSION, true));
+	echo sanitizeHTML(print_r($_SESSION, true));
 	echo "</p><p style='white-space:pre' class='fixed' id='debugCookie'>\$_COOKIE = ";
-	echo sanitize(print_r($_COOKIE, true));
+	echo sanitizeHTML(print_r($_COOKIE, true));
 	echo "</p></div>";
 	
 	// Hooked functions.
